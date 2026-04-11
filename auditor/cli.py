@@ -27,6 +27,7 @@ from rich.table import Table
 from rich import box
 from rich.text import Text
 
+from . import __version__
 from .config import AuditorConfig, PolicyPack
 from .models import HealthBand, Severity
 
@@ -54,7 +55,7 @@ SEVERITY_COLORS = {
 }
 
 
-def _print_header(tenant_url: str, version: str = "0.1.0") -> None:
+def _print_header(tenant_url: str, version: str = __version__) -> None:
     console.print()
     console.print(Panel(
         f"[bold]SailPoint ISC Auditor[/bold] v{version}\n"
@@ -147,7 +148,7 @@ def _print_top_findings(result, limit: int = 5) -> None:
 # ---------------------------------------------------------------------------
 
 @click.group()
-@click.version_option("0.1.0", prog_name="isc-audit")
+@click.version_option(__version__, prog_name="isc-audit")
 def main() -> None:
     """SailPoint ISC Auditor — AI-powered identity security audit engine."""
 
@@ -205,9 +206,13 @@ def run(
     ) as progress:
         task = progress.add_task("Running audit...", total=None)
 
+        # Use filename only for cleaner report metadata (not full path)
+        policy_name = Path(policy_pack).name if policy_pack else "default"
+
         result = run_audit(
             config=config,
             policy=policy,
+            policy_name=policy_name,
             run_all=run_all,
             families=list(families),
             detectors=list(detectors),
