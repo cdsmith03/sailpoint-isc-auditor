@@ -1,0 +1,64 @@
+# ── Credentials — never commit these ─────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# ── Distribution / packaging ──────────────────────────────────────────────────
+*.egg-info/
+*.egg
+dist/
+build/
+wheels/
+sdist/
+MANIFEST
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Type checkers & linters ───────────────────────────────────────────────────
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.cover
+.hypothesis/
+
+# ── IDE / editor ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Tool output — generated reports ──────────────────────────────────────────
+# HTML and JSON reports are generated at runtime — not committed
+*.html
+audit_*.json
+
+# Keep these JSON files in the repo:
+!policy_packs/**
+!tests/fixtures/**
+!.env.example
+
+# ── Runtime data ─────────────────────────────────────────────────────────────
+# History and suppressions live in ~/.isc-audit/ — not in the repo
+.isc-audit/

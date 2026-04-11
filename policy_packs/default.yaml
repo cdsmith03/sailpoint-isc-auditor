@@ -1,0 +1,63 @@
+# sailpoint-isc-auditor default policy pack
+# Copy this file and customize for your tenant.
+# Usage: isc-audit run --all --policy-pack ./policy_packs/myorg.yaml
+
+# Inactivity thresholds
+thresholds:
+  stale_account_days: 90          # IH-02: accounts inactive longer than this are flagged
+  inactivity_days: 60             # MI-03: machine identities dormant longer than this
+  non_employee_grace_days: 7      # LI-05: days past end date before flagging
+  mover_grace_days: 30            # LI-03: days after role change before stale access is flagged
+  peer_group_outlier_pct: 95      # AR-03: percentile threshold for outlier detection
+  certification_overdue_days: 7   # GQ-01: days past due date before campaign is flagged
+  source_stale_days: 3            # CR-02: days since last aggregation before flagging
+
+# Apps treated as privileged/critical
+# Findings involving these apps score higher impact
+privileged_apps:
+  - "AWS"
+  - "Azure"
+  - "GCP"
+  - "Workday"
+  - "SAP"
+  - "Snowflake"
+  - "GitHub Enterprise"
+  - "Okta"
+  - "Active Directory"
+  - "ServiceNow"
+
+# Entitlement names treated as sensitive
+# AR-06 fires when these are held by a broad population
+sensitive_entitlements:
+  - "Payroll Admin"
+  - "GL Posting"
+  - "IAM Admin"
+  - "Production Deploy"
+  - "HR Admin"
+  - "Finance Admin"
+  - "Root Access"
+  - "Domain Admin"
+  - "Global Admin"
+  - "Security Admin"
+
+# Sources treated as authoritative / critical
+# CR-07 fires when these have low policy attachment
+critical_sources:
+  - "Workday"
+  - "Active Directory"
+  - "AWS"
+  - "Azure AD"
+
+# Naming convention regex patterns
+# MI-06 fires when service accounts don't match these patterns
+naming_conventions:
+  service_accounts: "^svc[-_]"
+  break_glass: "^(bg|emergency|breakglass)[-_]"
+  shared_accounts: "^(shared|generic|admin)[-_]"
+
+# Per-detector overrides
+# detector_overrides:
+#   MI-06:
+#     enabled: false           # disable this detector entirely
+#   IH-02:
+#     stale_account_days: 60  # override threshold for this detector only
