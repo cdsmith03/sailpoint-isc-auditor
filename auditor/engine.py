@@ -5,7 +5,7 @@ Run order:
   1. Collect data from ISC (one collector per family)
   2. Run detectors (deterministic — no AI here)
   3. Apply suppressions
-  4. Compute risk scores
+  4. Compute coverage confidence from real collected data
   5. Compute tenant health score
   6. Run Claude AI analysis on findings
   7. Return AuditResult to CLI/reporters
@@ -14,12 +14,11 @@ Run order:
 from __future__ import annotations
 
 import logging
-from collections import defaultdict
-from typing import Callable
+from typing import Any, Callable
 
 from .client import ISCClient
 from .config import AuditorConfig, PolicyPack
-from .models import AuditResult, CoverageConfidence
+from .models import AuditResult, CollectionStatus, CoverageConfidence
 from .scoring import compute_tenant_health
 from .suppressions import apply_suppressions
 
@@ -59,12 +58,15 @@ def run_audit(
     with ISCClient(config) as client:
         result = AuditResult(
             tenant_url=config.tenant_url,
-            policy_pack=policy.model_dump_json(),
+            policy_pack="default",
         )
 
         all_findings:  list = []
         all_coverage:  list = []
         eligible_by_detector: dict[str, int] = {}
+
+        # Raw collected data — passed to coverage confidence computation
+        collected: dict[str, list[dict[str, Any]]] = {}
 
         # ── MI: Machine & Privileged Identity ──────────────────────────────
         if should_run("MI"):
@@ -133,9 +135,12 @@ def run_audit(
         result.findings          = all_findings
         result.detector_coverage = all_coverage
 
-        # Compute coverage confidence from what we collected
-        result.health_score.coverage_confidence = _estimate_coverage_confidence(
-            all_coverage, client, policy
+        # Compute coverage confidence from real collected data
+        progress("Computing coverage confidence...")
+        result.health_score.coverage_confidence = _compute_coverage_confidence(
+            all_coverage=all_coverage,
+            client=client,
+            policy=policy,
         )
 
         # Score everything
@@ -155,28 +160,267 @@ def run_audit(
         return result
 
 
-def _estimate_coverage_confidence(
-    coverage: list,
+def _safe_ratio(numerator: int, denominator: int) -> float:
+    """Return numerator/denominator bounded to [0.0, 1.0], or 0.0 if denominator is zero."""
+    if denominator == 0:
+        return 0.0
+    return max(0.0, min(1.0, numerator / denominator))
+
+
+def _compute_coverage_confidence(
+    all_coverage: list,
     client: ISCClient,
     policy: PolicyPack,
 ) -> CoverageConfidence:
     """
-    Estimate coverage confidence from collection results.
-    This drives the coverage confidence factor in the health score.
+    Compute coverage confidence from real data collected during the audit run.
+
+    Each signal is a ratio from 0.0 (none covered) to 1.0 (fully covered).
+    These feed into the tenant health score formula:
+
+        tenant_health = posture_score × (0.80 + 0.20 × coverage_confidence)
+
+    Signals that cannot be computed (e.g. API unavailable) default to 0.0
+    so that missing visibility is penalised rather than assumed healthy.
     """
-    from .models import CollectionStatus
+    logger.info("Computing coverage confidence signals from real data")
 
-    full_count    = sum(1 for c in coverage if c.status == CollectionStatus.FULL)
-    total_count   = max(len(coverage), 1)
-    api_coverage  = full_count / total_count
+    # ── Signal 1: sources_recently_aggregated ──────────────────────────────
+    # Ratio of detectors that returned FULL status vs fallback/skipped.
+    # Already computed correctly — this reflects API availability.
+    full_count   = sum(1 for c in all_coverage if c.status == CollectionStatus.FULL)
+    total_count  = max(len(all_coverage), 1)
+    api_coverage = _safe_ratio(full_count, total_count)
 
-    # Simplified signals — expanded in later builds
-    return CoverageConfidence(
-        critical_sources_connected=0.8,       # TODO: query sources
+    # ── Signal 2: critical_sources_connected ───────────────────────────────
+    # Ratio of policy.critical_sources that appear in ISC with a recent
+    # aggregation (lastAggregationDate within source_stale_days).
+    critical_sources_connected = _compute_critical_sources_signal(client, policy)
+
+    # ── Signal 3: entitlements_with_owners ─────────────────────────────────
+    # Ratio of entitlements that have an owner assigned.
+    # Sampled from the first page to avoid fetching thousands of entitlements.
+    entitlements_with_owners = _compute_entitlement_ownership_signal(client)
+
+    # ── Signal 4: high_risk_apps_governed ──────────────────────────────────
+    # Ratio of policy.privileged_apps that appear in at least one
+    # active certification campaign's scope.
+    high_risk_apps_governed = _compute_privileged_app_governance_signal(client, policy)
+
+    # ── Signal 5: lifecycle_populations_covered ────────────────────────────
+    # Ratio of identities that have all required governance attributes
+    # (manager, department, employmentType) populated.
+    # Sampled from the first page to avoid fetching all identities again.
+    lifecycle_populations_covered = _compute_lifecycle_coverage_signal(client)
+
+    # ── Signal 6: certification_coverage ──────────────────────────────────
+    # Ratio of policy.critical_sources that are covered by at least one
+    # active certification campaign.
+    certification_coverage = _compute_certification_coverage_signal(client, policy)
+
+    conf = CoverageConfidence(
+        critical_sources_connected=critical_sources_connected,
         sources_recently_aggregated=api_coverage,
-        entitlements_with_owners=0.5,          # TODO: query entitlements
-        machine_identities_visible=api_coverage,
-        high_risk_apps_governed=0.6,           # TODO: derive from sources
-        lifecycle_populations_covered=0.7,     # TODO: derive from identities
-        certification_coverage=0.6,            # TODO: derive from certifications
+        entitlements_with_owners=entitlements_with_owners,
+        machine_identities_visible=api_coverage,   # proxy: MI API availability
+        high_risk_apps_governed=high_risk_apps_governed,
+        lifecycle_populations_covered=lifecycle_populations_covered,
+        certification_coverage=certification_coverage,
     )
+    conf.compute()
+
+    logger.info(
+        "Coverage confidence: %d/100 "
+        "(sources=%.2f, ents_owned=%.2f, privileged_governed=%.2f, "
+        "lifecycle=%.2f, cert_coverage=%.2f)",
+        conf.score_display,
+        critical_sources_connected,
+        entitlements_with_owners,
+        high_risk_apps_governed,
+        lifecycle_populations_covered,
+        certification_coverage,
+    )
+    return conf
+
+
+def _compute_critical_sources_signal(client: ISCClient, policy: PolicyPack) -> float:
+    """
+    Ratio of policy.critical_sources that exist in ISC and have been
+    aggregated within policy.source_stale_days.
+    """
+    if not policy.critical_sources:
+        return 1.0   # No critical sources defined — not a gap
+
+    try:
+        sources = client.get_sources()
+    except Exception as exc:
+        logger.warning("Coverage: could not fetch sources for critical_sources signal: %s", exc)
+        return 0.0
+
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+
+    source_map = {s.get("name", ""): s for s in sources}
+    connected = 0
+
+    for critical_name in policy.critical_sources:
+        source = source_map.get(critical_name)
+        if not source:
+            logger.debug("Coverage: critical source '%s' not found in ISC", critical_name)
+            continue
+
+        last_agg = (
+            source.get("lastAggregationDate")
+            or source.get("lastSuccessfulAggregation")
+            or source.get("modified")
+        )
+
+        if not last_agg:
+            logger.debug("Coverage: critical source '%s' has no aggregation date", critical_name)
+            continue
+
+        try:
+            dt = datetime.fromisoformat(last_agg.replace("Z", "+00:00"))
+            days_stale = (now - dt).days
+            if days_stale <= policy.source_stale_days:
+                connected += 1
+            else:
+                logger.debug(
+                    "Coverage: critical source '%s' is stale (%d days)",
+                    critical_name, days_stale,
+                )
+        except (ValueError, TypeError):
+            pass
+
+    return _safe_ratio(connected, len(policy.critical_sources))
+
+
+def _compute_entitlement_ownership_signal(client: ISCClient) -> float:
+    """
+    Ratio of entitlements that have an owner assigned.
+    Samples up to 500 entitlements to avoid long fetch times.
+    """
+    try:
+        entitlements = client.get_all("/v3/entitlements", max_records=500)
+    except Exception as exc:
+        logger.warning("Coverage: could not fetch entitlements for ownership signal: %s", exc)
+        return 0.0
+
+    if not entitlements:
+        return 0.0
+
+    owned = sum(
+        1 for e in entitlements
+        if e.get("owner") or e.get("ownerId") or e.get("ownerName")
+    )
+    return _safe_ratio(owned, len(entitlements))
+
+
+def _compute_privileged_app_governance_signal(
+    client: ISCClient,
+    policy: PolicyPack,
+) -> float:
+    """
+    Ratio of policy.privileged_apps that appear in at least one
+    active certification campaign's scope.
+    """
+    if not policy.privileged_apps:
+        return 1.0
+
+    try:
+        certifications = client.get_certifications()
+    except Exception as exc:
+        logger.warning("Coverage: could not fetch certifications for privileged_apps signal: %s", exc)
+        return 0.0
+
+    # Collect source/app names referenced in active certifications
+    governed_apps: set[str] = set()
+    active_statuses = {"ACTIVE", "OPEN", "IN_PROGRESS", "STAGED"}
+
+    for cert in certifications:
+        status = (cert.get("status") or "").upper()
+        if status not in active_statuses:
+            continue
+        # Certifications reference apps/sources in their scope
+        for item in cert.get("items") or []:
+            source_name = (item.get("source") or {}).get("name", "")
+            if source_name:
+                governed_apps.add(source_name)
+        # Also check direct scope references
+        for scope in cert.get("scope") or []:
+            app_name = scope.get("name") or scope.get("applicationName") or ""
+            if app_name:
+                governed_apps.add(app_name)
+
+    covered = sum(
+        1 for app in policy.privileged_apps
+        if any(app.lower() in g.lower() for g in governed_apps)
+    )
+    return _safe_ratio(covered, len(policy.privileged_apps))
+
+
+def _compute_lifecycle_coverage_signal(client: ISCClient) -> float:
+    """
+    Ratio of identities that have all required governance attributes populated.
+    Required: manager, department, employmentType.
+    Samples up to 500 identities to avoid long fetch times.
+    """
+    REQUIRED = ("manager", "department", "employmentType")
+
+    try:
+        identities = client.get_all("/v3/identities", max_records=500)
+    except Exception as exc:
+        logger.warning("Coverage: could not fetch identities for lifecycle signal: %s", exc)
+        return 0.0
+
+    if not identities:
+        return 0.0
+
+    complete = 0
+    for identity in identities:
+        attrs = identity.get("attributes") or {}
+        has_all = all(
+            identity.get(attr) or attrs.get(attr)
+            for attr in REQUIRED
+        )
+        if has_all:
+            complete += 1
+
+    return _safe_ratio(complete, len(identities))
+
+
+def _compute_certification_coverage_signal(
+    client: ISCClient,
+    policy: PolicyPack,
+) -> float:
+    """
+    Ratio of policy.critical_sources covered by at least one
+    active or recent certification campaign.
+    """
+    if not policy.critical_sources:
+        return 1.0
+
+    try:
+        certifications = client.get_certifications()
+    except Exception as exc:
+        logger.warning("Coverage: could not fetch certifications for coverage signal: %s", exc)
+        return 0.0
+
+    # Collect source names that appear in any certification
+    certified_sources: set[str] = set()
+    for cert in certifications:
+        for item in cert.get("items") or []:
+            source_name = (item.get("source") or {}).get("name", "")
+            if source_name:
+                certified_sources.add(source_name.lower())
+        # Check scope references
+        for scope in cert.get("scope") or []:
+            name = (scope.get("name") or scope.get("applicationName") or "").lower()
+            if name:
+                certified_sources.add(name)
+
+    covered = sum(
+        1 for cs in policy.critical_sources
+        if cs.lower() in certified_sources
+    )
+    return _safe_ratio(covered, len(policy.critical_sources))
