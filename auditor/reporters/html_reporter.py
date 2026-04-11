@@ -30,7 +30,10 @@ from pathlib import Path
 
 from ..models import AuditResult, ControlFamily, HealthBand, Severity
 
-VERSION = "0.1.0"
+try:
+    from .. import __version__ as VERSION
+except ImportError:
+    VERSION = "0.1.0-dev"
 
 # Severity colour config
 SEV_COLOR = {

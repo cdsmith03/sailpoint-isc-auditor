@@ -14,7 +14,7 @@ Run order:
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable
+from typing import Callable
 
 from .client import ISCClient
 from .config import AuditorConfig, PolicyPack
@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 def run_audit(
     config: AuditorConfig,
     policy: PolicyPack,
+    policy_name: str = "default",
     run_all: bool = True,
     families: list[str] | None = None,
     detectors: list[str] | None = None,
@@ -58,15 +59,12 @@ def run_audit(
     with ISCClient(config) as client:
         result = AuditResult(
             tenant_url=config.tenant_url,
-            policy_pack="default",
+            policy_pack=policy_name,
         )
 
         all_findings:  list = []
         all_coverage:  list = []
         eligible_by_detector: dict[str, int] = {}
-
-        # Raw collected data — passed to coverage confidence computation
-        collected: dict[str, list[dict[str, Any]]] = {}
 
         # ── MI: Machine & Privileged Identity ──────────────────────────────
         if should_run("MI"):
