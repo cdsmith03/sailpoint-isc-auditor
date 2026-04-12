@@ -441,7 +441,8 @@ def detect_ar_05(
                 why_fired=(
                     f"{obj_type.replace('_', ' ').title()} '{obj_name}' contains "
                     f"{len(ents)} entitlements"
-                    + (f", including {len(sensitive_ents)} sensitive ones" if sensitive_ents else "")
+                    + (f", including {len(sensitive_ents)} sensitive ones"
+                       if sensitive_ents else "")
                     + ". Oversized roles violate least-privilege, are difficult to certify "
                     "meaningfully, and create a large blast radius if misassigned."
                 ),
