@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 
 from ..client import ISCClient
 from ..config import PolicyPack
@@ -189,7 +189,7 @@ def detect_cr_02(
         eligible_count=eligible,
         affected_count=len(findings),
     )
-    logger.info(f"  {detector_id}: {len(findings)} stale sources / {eligible} sources with agg date")
+    logger.info("  %s: %d stale sources / %d sources with agg date", detector_id, len(findings), eligible)
     return findings, coverage
 
 
@@ -365,7 +365,7 @@ def detect_cr_04(
         eligible_count=eligible,
         affected_count=len(findings),
     )
-    logger.info(f"  {detector_id}: {len(findings)} failed deprovisions / {eligible} deprovision ops")
+    logger.info("  %s: %d failed deprovisions / %d deprovision ops", detector_id, len(findings), eligible)
     return findings, coverage
 
 
@@ -395,7 +395,10 @@ def detect_cr_05(
         eligible += 1
 
         # But the native identity attribute or last aggregated state shows enabled
-        native_enabled = acct.get("nativeIdentity") and acct.get("attributes", {}).get("active") is True
+        native_enabled = (
+            acct.get("nativeIdentity") and
+            acct.get("attributes", {}).get("active") is True
+        )
         raw_enabled    = acct.get("attributes", {}).get("enabled") is True
 
         if native_enabled or raw_enabled:
@@ -606,7 +609,7 @@ def detect_cr_07(
         eligible_count=eligible,
         affected_count=len(findings),
     )
-    logger.info(f"  {detector_id}: {len(findings)} undergovemed critical sources / {eligible} critical")
+    logger.info("  %s: %d undergoverned critical sources / %d critical", detector_id, len(findings), eligible)
     return findings, coverage
 
 
@@ -722,7 +725,10 @@ def run_cr_detectors(
         (detect_cr_01, {"sources": sources, "policy": policy}),
         (detect_cr_02, {"sources": sources, "policy": policy}),
         (detect_cr_03, {"account_activities": account_activities, "policy": policy}),
-        (detect_cr_04, {"account_activities": account_activities, "accounts": accounts, "policy": policy}),
+        (detect_cr_04, {
+            "account_activities": account_activities,
+            "accounts": accounts, "policy": policy,
+        }),
         (detect_cr_05, {"accounts": accounts, "policy": policy}),
         (detect_cr_06, {"sources": sources, "accounts": accounts, "policy": policy}),
         (detect_cr_07, {"sources": sources, "certifications": certifications, "policy": policy}),

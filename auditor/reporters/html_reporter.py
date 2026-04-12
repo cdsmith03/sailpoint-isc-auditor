@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import html
 import json
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from ..models import AuditResult, ControlFamily, HealthBand, Severity
@@ -186,7 +186,11 @@ def generate_html_report(result: AuditResult, output_path: Path) -> None:
             f'{_e(trend_arrow)} {abs(t):.1f} vs last run</div>'
         )
     else:
-        trend_html = '<div class="score-label" style="margin-top:4px">First run — no trend data</div>'
+        trend_html = (
+            '<div class="score-label" style="margin-top:4px">'
+            "First run — no trend data"
+            "</div>"
+        )
 
     # ── Critical conditions banner ─────────────────────────────────────────
     if health.has_critical_conditions:
@@ -235,7 +239,12 @@ def generate_html_report(result: AuditResult, output_path: Path) -> None:
     for i, f in enumerate(top_findings):
         obj_names = f.evidence.affected_object_names
         extra     = f" +{len(obj_names) - 2} more" if len(obj_names) > 2 else ""
-        sub       = f"{_e(f.detector_id)} · {_e(f.family.value)} · {_e(', '.join(obj_names[:2]))}{_e(extra)}"
+        sub = (
+            f"{_e(f.detector_id)} · "
+            f"{_e(f.family.value)} · "
+            f"{_e(', '.join(obj_names[:2]))}"
+            f"{_e(extra)}"
+        )
         drivers_html += (
             f'<div class="risk-driver">'
             f'<div class="risk-num" aria-hidden="true">{i+1}</div>'
@@ -274,7 +283,11 @@ def generate_html_report(result: AuditResult, output_path: Path) -> None:
         for f in suppressed:
             reason  = _e(f.suppression.reason   if f.suppression else "—")
             ticket  = _e(f.suppression.ticket   if f.suppression and f.suppression.ticket else "—")
-            expires = _e(_fmt_dt(f.suppression.expires_at) if f.suppression and f.suppression.expires_at else "Never")
+            expires = _e(
+                _fmt_dt(f.suppression.expires_at)
+                if f.suppression and f.suppression.expires_at
+                else "Never"
+            )
             objs    = _e(", ".join(f.evidence.affected_object_names[:2]))
             sup_rows += (
                 f'<tr class="suppressed-row">'
@@ -362,13 +375,18 @@ def generate_html_report(result: AuditResult, output_path: Path) -> None:
   .score-trend {{ font-size: 13px; margin-top: 8px; }}
 
   .cov-bar-bg {{ background: #e5e7eb; border-radius: 99px; height: 8px; margin: 8px 0; }}
-  .cov-bar-fill {{ height: 8px; border-radius: 99px; background: {cov_color}; width: {cov_score:.0f}%; }}
+  .cov-bar-fill {{
+    height: 8px; border-radius: 99px;
+    background: {cov_color}; width: {cov_score:.0f}%;
+  }}
 
   .critical-banner {{
     background: #fef2f2; border: 1.5px solid #dc2626;
     border-radius: 10px; padding: 16px 20px; margin-bottom: 20px;
   }}
-  .critical-banner-title {{ color: #dc2626; font-weight: 700; font-size: 14px; margin-bottom: 10px; }}
+  .critical-banner-title {{
+    color: #dc2626; font-weight: 700; font-size: 14px; margin-bottom: 10px;
+  }}
   .critical-item {{
     display: flex; align-items: flex-start; gap: 8px;
     padding: 6px 0; border-bottom: 1px solid #fecaca; font-size: 13px;
@@ -580,11 +598,13 @@ def generate_html_report(result: AuditResult, output_path: Path) -> None:
   <section class="exec-card" aria-label="Finding summary">
     <div class="card-title">Finding Summary</div>
     <div style="display:flex;flex-direction:column;gap:0">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f4f6">
+      <div style="display:flex;justify-content:space-between;
+           align-items:center;padding:8px 0;border-bottom:1px solid #f3f4f6">
         <span style="color:#dc2626;font-weight:700">Critical</span>
         <span style="font-size:22px;font-weight:800;color:#dc2626">{result.critical_count}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f4f6">
+      <div style="display:flex;justify-content:space-between;
+           align-items:center;padding:8px 0;border-bottom:1px solid #f3f4f6">
         <span style="color:#ea580c;font-weight:700">High</span>
         <span style="font-size:22px;font-weight:800;color:#ea580c">{result.high_count}</span>
       </div>
@@ -686,7 +706,8 @@ def generate_html_report(result: AuditResult, output_path: Path) -> None:
     <strong>impact</strong> (how dangerous is this object?),
     <strong>exploitability</strong> (how easy is it to abuse right now?), and
     <strong>governance failure</strong> (how badly did controls fail?).
-    The formula is: <code>risk&nbsp;=&nbsp;impact&nbsp;×&nbsp;exploitability&nbsp;×&nbsp;governance_failure</code>.
+    The formula is:
+    <code>risk&nbsp;=&nbsp;impact&nbsp;×&nbsp;exploitability&nbsp;×&nbsp;governance_failure</code>.
     Findings roll up into family scores, which roll up into a posture score.
     The posture score is then adjusted by coverage confidence:
     <code>tenant_health&nbsp;=&nbsp;posture&nbsp;×&nbsp;(0.80&nbsp;+&nbsp;0.20&nbsp;×&nbsp;coverage_confidence)</code>.</p>
@@ -760,8 +781,19 @@ function renderFindings(list) {{
     tr.setAttribute('aria-expanded', 'false');
 
     const cells = [
-      () => {{ const td = document.createElement('td'); td.appendChild(badge(f.severity)); return td; }},
-      () => {{ const td = document.createElement('td'); const s = document.createElement('span'); s.className='det-id'; s.textContent=f.detector; td.appendChild(s); return td; }},
+      () => {{
+        const td = document.createElement('td');
+        td.appendChild(badge(f.severity));
+        return td;
+      }},
+      () => {{
+        const td = document.createElement('td');
+        const s = document.createElement('span');
+        s.className = 'det-id';
+        s.textContent = f.detector;
+        td.appendChild(s);
+        return td;
+      }},
       () => {{
         const td = document.createElement('td');
         const btn = document.createElement('button');
@@ -780,8 +812,18 @@ function renderFindings(list) {{
         td.appendChild(btn);
         return td;
       }},
-      () => {{ const td = document.createElement('td'); td.style.cssText='color:#6b7280;font-size:12px'; td.appendChild(t(f.family)); return td; }},
-      () => {{ const td = document.createElement('td'); td.style.cssText='color:#6b7280;font-size:12px'; td.appendChild(t(f.objects)); return td; }},
+      () => {{
+        const td = document.createElement('td');
+        td.style.cssText = 'color:#6b7280;font-size:12px';
+        td.appendChild(t(f.family));
+        return td;
+      }},
+      () => {{
+        const td = document.createElement('td');
+        td.style.cssText = 'color:#6b7280;font-size:12px';
+        td.appendChild(t(f.objects));
+        return td;
+      }},
       () => {{ const td = document.createElement('td'); td.style.cssText=`font-weight:700;color:${{riskColor(f.risk)}}`; td.appendChild(t(String(f.risk))); return td; }},
     ];
     cells.forEach(fn => tr.appendChild(fn()));

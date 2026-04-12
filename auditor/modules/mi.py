@@ -20,7 +20,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 
 from ..client import ISCClient, ISCEndpointUnavailable, ISCPermissionDenied
 from ..config import PolicyPack
@@ -191,7 +191,7 @@ def detect_mi_01(
         affected_count=len(findings),
         warning=machine_identities.warning,
     )
-    logger.info(f"  {detector_id}: {len(findings)} findings / {len(machine_identities.data)} eligible")
+    logger.info("  %s: %d findings / %d eligible", detector_id, len(findings), len(machine_identities.data))
     return findings, coverage
 
 
@@ -298,7 +298,7 @@ def detect_mi_02(
         affected_count=len(findings),
         warning=machine_identities.warning,
     )
-    logger.info(f"  {detector_id}: {len(findings)} findings / {len(machine_identities.data)} eligible")
+    logger.info("  %s: %d findings / %d eligible", detector_id, len(findings), len(machine_identities.data))
     return findings, coverage
 
 
@@ -613,7 +613,7 @@ def detect_mi_06(
         affected_count=len(findings),
         warning=machine_identities.warning,
     )
-    logger.info(f"  {detector_id}: {len(findings)} findings / {len(machine_identities.data)} eligible")
+    logger.info("  %s: %d findings / %d eligible", detector_id, len(findings), len(machine_identities.data))
     return findings, coverage
 
 
@@ -682,7 +682,7 @@ def detect_mi_07(
         affected_count=len(findings),
         warning=machine_identities.warning,
     )
-    logger.info(f"  {detector_id}: {len(findings)} findings / {len(machine_identities.data)} eligible")
+    logger.info("  %s: %d findings / %d eligible", detector_id, len(findings), len(machine_identities.data))
     return findings, coverage
 
 

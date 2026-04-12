@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 
 from ..client import ISCClient
 from ..config import PolicyPack
@@ -225,7 +225,8 @@ def detect_ih_03(
             continue
 
         eligible += 1
-        identity_active = identity_status.get(identity_id) not in ("INACTIVE", "TERMINATED", "DISABLED")
+        not_active = ("INACTIVE", "TERMINATED", "DISABLED")
+        identity_active = identity_status.get(identity_id) not in not_active
 
         # The mismatch: account is disabled at source, but identity is still active in ISC
         if not acct_enabled and identity_active:
@@ -505,7 +506,7 @@ def detect_ih_06(
         eligible_count=eligible,
         affected_count=len(findings),
     )
-    logger.info(f"  {detector_id}: {len(findings)} findings from {len(stale_sources)} stale sources")
+    logger.info("  %s: %d findings from %d stale sources", detector_id, len(findings), len(stale_sources))
     return findings, coverage
 
 

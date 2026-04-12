@@ -256,8 +256,9 @@ class TestNoAiCliWiring:
         isc-audit run --all --no-ai must not fail when ANTHROPIC_API_KEY
         is unset. This proves the CLI wiring is intact end-to-end.
         """
-        from unittest.mock import MagicMock, patch
         from click.testing import CliRunner
+        from unittest.mock import MagicMock, patch
+
         from auditor.cli import main
 
         monkeypatch.setenv("ISC_TENANT_URL",    "https://acme.identitynow.com")
@@ -299,8 +300,9 @@ class TestNoAiCliWiring:
         When --no-ai is passed, AuditorConfig.from_env must be called
         with require_ai=False. This directly tests the wiring.
         """
-        from unittest.mock import MagicMock, patch
         from click.testing import CliRunner
+        from unittest.mock import MagicMock, patch
+
         from auditor.cli import main
         from auditor.config import AuditorConfig
 

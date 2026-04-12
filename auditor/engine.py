@@ -258,7 +258,7 @@ def _compute_critical_sources_signal(client: ISCClient, policy: PolicyPack) -> f
         logger.warning("Coverage: could not fetch sources for critical_sources signal: %s", exc)
         return 0.0
 
-    from datetime import UTC, datetime, timezone
+    from datetime import UTC, datetime
     now = datetime.now(UTC)
 
     source_map = {s.get("name", ""): s for s in sources}
@@ -331,7 +331,9 @@ def _compute_privileged_app_governance_signal(
     try:
         certifications = client.get_certifications()
     except Exception as exc:
-        logger.warning("Coverage: could not fetch certifications for privileged_apps signal: %s", exc)
+        logger.warning(
+            "Coverage: could not fetch certifications for privileged_apps signal: %s", exc
+        )
         return 0.0
 
     # Collect source/app names referenced in active certifications

@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 
 from ..client import ISCClient
 from ..config import PolicyPack
@@ -286,7 +286,10 @@ def detect_gq_03(
                         "approved_items": approved_items,
                         "revoked_items": revoked_items,
                         "approve_rate": approve_rate,
-                        "avg_seconds_per_decision": duration_secs / total_items if duration_secs and total_items else None,
+                        "avg_seconds_per_decision": (
+                            duration_secs / total_items
+                            if duration_secs and total_items else None
+                        ),
                     },
                     recommended_fix=(
                         "Review the certification design. Consider AI-assisted "
@@ -554,7 +557,10 @@ def detect_gq_07(
                         f"cannot make informed approve/revoke decisions without knowing "
                         f"what access this object grants and why it exists."
                     ),
-                    source_data={"has_description": bool(description), "description_length": len(description)},
+                    source_data={
+                        "has_description": bool(description),
+                        "description_length": len(description),
+                    },
                     recommended_fix=(
                         f"Add a clear business-language description to '{obj_name}' that "
                         f"explains: what access it grants, who should have it, and why it exists."
@@ -671,7 +677,10 @@ def run_gq_detectors(
         (detect_gq_01, {"certifications": certifications, "policy": policy}),
         (detect_gq_02, {"certifications": certifications, "roles": roles, "policy": policy}),
         (detect_gq_03, {"certifications": certifications, "policy": policy}),
-        (detect_gq_04, {"roles": roles, "access_profiles": access_profiles, "sources": sources, "policy": policy}),
+        (detect_gq_04, {
+            "roles": roles, "access_profiles": access_profiles,
+            "sources": sources, "policy": policy,
+        }),
         (detect_gq_05, {"governance_groups": governance_groups, "policy": policy}),
         (detect_gq_06, {"certifications": certifications, "policy": policy}),
         (detect_gq_07, {"roles": roles, "access_profiles": access_profiles, "policy": policy}),

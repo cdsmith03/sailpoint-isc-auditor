@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 
 from ..client import ISCClient
 from ..config import PolicyPack
@@ -612,7 +612,7 @@ def detect_li_06(
         eligible_count=eligible,
         affected_count=len(findings),
     )
-    logger.info(f"  {detector_id}: {len(findings)} findings / {eligible} identities with auth status")
+    logger.info("  %s: %d findings / %d identities with auth status", detector_id, len(findings), eligible)
     return findings, coverage
 
 
@@ -640,13 +640,16 @@ def run_li_detectors(
     all_findings: list[Finding]          = []
     all_coverage: list[DetectorCoverage] = []
 
+    id_kwargs  = {"identities": identities, "accounts_by_identity": accounts_by_identity, "policy": policy}
+    ne_kwargs  = {"non_employees": non_employees, "accounts_by_identity": accounts_by_identity, "policy": policy}
+
     for detector_fn, kwargs in [
-        (detect_li_01, {"identities": identities, "accounts_by_identity": accounts_by_identity, "policy": policy}),
-        (detect_li_02, {"identities": identities, "accounts_by_identity": accounts_by_identity, "policy": policy}),
-        (detect_li_03, {"identities": identities, "accounts_by_identity": accounts_by_identity, "policy": policy}),
-        (detect_li_04, {"identities": identities, "accounts_by_identity": accounts_by_identity, "policy": policy}),
-        (detect_li_05, {"non_employees": non_employees, "accounts_by_identity": accounts_by_identity, "policy": policy}),
-        (detect_li_06, {"identities": identities, "accounts_by_identity": accounts_by_identity, "policy": policy}),
+        (detect_li_01, id_kwargs),
+        (detect_li_02, id_kwargs),
+        (detect_li_03, id_kwargs),
+        (detect_li_04, id_kwargs),
+        (detect_li_05, ne_kwargs),
+        (detect_li_06, id_kwargs),
     ]:
         det_id = detector_fn.__name__.replace("detect_", "").replace("_", "-").upper()
         if not policy.is_detector_enabled(det_id):

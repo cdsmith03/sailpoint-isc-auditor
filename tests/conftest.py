@@ -6,7 +6,7 @@ Fixtures here are available to all test files automatically.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -22,8 +22,8 @@ from auditor.models import (
     RiskScore,
     Severity,
     Suppression,
-    TenantHealthScore,
     FamilyScore,
+    TenantHealthScore,
 )
 
 
