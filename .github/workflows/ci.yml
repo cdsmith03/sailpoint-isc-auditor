@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Run tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Verify syntax
+        run: |
+          python -m compileall -q auditor tests
+
+      - name: Run tests
+        run: |
+          python -m pytest tests -v --tb=short --maxfail=1
+
+      - name: Check for hardcoded credentials
+        shell: bash
+        run: |
+          set -e
+
+          if grep -RInE 'ANTHROPIC_API_KEY\s*=\s*["'"'"']sk-' auditor/; then
+            echo "ERROR: Hardcoded Anthropic key detected"
+            exit 1
+          fi
+
+          if grep -RInE 'client_secret\s*=\s*["'"'"'][A-Za-z0-9]{8}' auditor/; then
+            echo "ERROR: Hardcoded client secret detected"
+            exit 1
+          fi
+
+          echo "Credential check passed"
