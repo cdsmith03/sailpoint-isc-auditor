@@ -56,7 +56,9 @@ def _fmt_dt(dt: datetime | None) -> str | None:
     return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _finding_to_dict(f: Finding, audit_run_id: str, tenant_url: str, audited_at: str) -> dict[str, Any]:
+def _finding_to_dict(
+    f: Finding, audit_run_id: str, tenant_url: str, audited_at: str,
+) -> dict[str, Any]:
     """
     Serialise a single finding to a flat dict suitable for both the
     findings array in report.json and a single NDJSON line.

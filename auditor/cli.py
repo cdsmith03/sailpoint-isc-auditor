@@ -169,7 +169,10 @@ def main() -> None:
         "and a per-finding NDJSON file (.ndjson) for SIEM ingestion."
     ),
 )
-@click.option("--out", default=None, help="Output file path (base path for json — extensions added automatically)")
+@click.option(
+    "--out", default=None,
+    help="Output file path (base path for json — extensions added automatically)",
+)
 @click.option("--policy-pack",       default=None,   help="Path to custom policy pack YAML")
 @click.option("--no-ai",             is_flag=True,   help="Skip Claude AI analysis (faster)")
 @click.option("--verbose", "-v",     is_flag=True,   help="Verbose logging")
