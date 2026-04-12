@@ -29,6 +29,8 @@ from rich.text import Text
 
 from . import __version__
 from .config import AuditorConfig, PolicyPack
+
+logger = logging.getLogger(__name__)
 from .models import HealthBand, Severity
 
 console = Console()
@@ -183,9 +185,9 @@ def run(
         console.print("[red]Specify --all, --families, or --detectors[/red]")
         sys.exit(1)
 
-    # Load config
+    # Load config — Anthropic key is only required when AI analysis is enabled
     try:
-        config = AuditorConfig.from_env()
+        config = AuditorConfig.from_env(require_ai=not no_ai)
     except EnvironmentError as e:
         console.print(f"[red]Configuration error:[/red] {e}")
         sys.exit(1)

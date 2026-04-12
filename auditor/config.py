@@ -116,8 +116,8 @@ class AuditorConfig(BaseModel):
     client_id:     str
     client_secret: str
 
-    # Anthropic
-    anthropic_api_key: str
+    # Anthropic — optional when running with --no-ai
+    anthropic_api_key: str = ""
 
     # Tuning — bounds-validated at load time
     api_timeout: int   = 30     # seconds; range 5–300
@@ -146,25 +146,38 @@ class AuditorConfig(BaseModel):
         return upper
 
     @classmethod
-    def from_env(cls) -> AuditorConfig:
+    def from_env(cls, require_ai: bool = True) -> AuditorConfig:
         """Load configuration from environment variables.
+
+        Args:
+            require_ai: If True (default), ANTHROPIC_API_KEY is required.
+                        Set to False when running with --no-ai to allow
+                        offline/CI runs without an Anthropic account.
 
         Raises EnvironmentError with a clear message listing all missing
         required variables so the user can fix them all at once.
         """
-        required = ("ISC_TENANT_URL", "ISC_CLIENT_ID", "ISC_CLIENT_SECRET", "ANTHROPIC_API_KEY")
+        always_required = ("ISC_TENANT_URL", "ISC_CLIENT_ID", "ISC_CLIENT_SECRET")
+        ai_required     = ("ANTHROPIC_API_KEY",) if require_ai else ()
+        required        = always_required + ai_required
+
         missing = [k for k in required if not os.getenv(k)]
         if missing:
+            hint = (
+                "Copy .env.example to .env and fill in your credentials."
+                if require_ai else
+                "Copy .env.example to .env and fill in your ISC credentials."
+                " ANTHROPIC_API_KEY is not required when using --no-ai."
+            )
             raise EnvironmentError(
-                f"Missing required environment variables: {', '.join(missing)}\n"
-                f"Copy .env.example to .env and fill in your credentials."
+                f"Missing required environment variables: {', '.join(missing)}\n{hint}"
             )
 
         return cls(
             tenant_url=os.environ["ISC_TENANT_URL"],
             client_id=os.environ["ISC_CLIENT_ID"],
             client_secret=os.environ["ISC_CLIENT_SECRET"],
-            anthropic_api_key=os.environ["ANTHROPIC_API_KEY"],
+            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", ""),
             api_timeout=_parse_positive_int(
                 os.getenv("ISC_API_TIMEOUT", "30"), "ISC_API_TIMEOUT",
                 minimum=5, maximum=300,
