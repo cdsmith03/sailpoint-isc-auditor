@@ -111,7 +111,7 @@ class FindingEvidence(BaseModel):
 
 class RiskScore(BaseModel):
     """
-    Two-axis risk score: impact × exploitability × governance_failure.
+    Three-factor risk score: impact × exploitability × governance_failure.
     All inputs validated to [0.0, 1.0]. raw_score and normalized auto-computed.
     """
     impact:             float = Field(ge=0.0, le=1.0)
@@ -235,6 +235,8 @@ class FamilyScore(BaseModel):
     detector_scores: dict[str, float] = Field(default_factory=dict)
     finding_count:   int              = 0
     critical_count:  int              = 0
+    high_count:      int              = 0
+    medium_count:    int              = 0
 
 
 # ---------------------------------------------------------------------------

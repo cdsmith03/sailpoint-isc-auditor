@@ -259,15 +259,20 @@ def compute_family_score(
     score = max(0.0, score)
 
     all_findings = [f for flist in [findings_by_detector.get(d, []) for d in FAMILY_DETECTOR_MAP.get(family, [])] for f in flist]
-    critical = sum(1 for f in all_findings if f.severity == Severity.CRITICAL and not f.suppressed)
+    active   = [f for f in all_findings if not f.suppressed]
+    critical = sum(1 for f in active if f.severity == Severity.CRITICAL)
+    high     = sum(1 for f in active if f.severity == Severity.HIGH)
+    medium   = sum(1 for f in active if f.severity == Severity.MEDIUM)
 
     return FamilyScore(
         family=family,
         score=round(score, 1),
         weight=TenantHealthScore.model_fields["FAMILY_WEIGHTS"].default.get(family.name, 0.0),
         detector_scores=detector_scores,
-        finding_count=len([f for f in all_findings if not f.suppressed]),
+        finding_count=len(active),
         critical_count=critical,
+        high_count=high,
+        medium_count=medium,
     )
 
 
