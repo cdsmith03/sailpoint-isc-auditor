@@ -45,13 +45,13 @@ class ISCClientError(Exception):
 class ISCAuthError(ISCClientError):
     """OAuth token request failed or credentials are invalid."""
 
-class ISCPermissionDenied(ISCClientError):
+class ISCPermissionDeniedError(ISCClientError):
     """403 — the API client is missing a required scope."""
 
-class ISCEndpointUnavailable(ISCClientError):
+class ISCEndpointUnavailableError(ISCClientError):
     """404 / 501 — endpoint is experimental or not enabled on this tenant tier."""
 
-class ISCRateLimitExceeded(ISCClientError):
+class ISCRateLimitExceededError(ISCClientError):
     """429 — rate limited. Tenacity will retry with backoff."""
 
 class ISCServerError(ISCClientError):
@@ -157,7 +157,7 @@ class ISCClient:
     # ------------------------------------------------------------------
 
     @retry(
-        retry=retry_if_exception_type((ISCRateLimitExceeded, ISCServerError)),
+        retry=retry_if_exception_type((ISCRateLimitExceededError, ISCServerError)),
         wait=wait_exponential(multiplier=1, min=2, max=30),
         stop=stop_after_attempt(4),
     )
@@ -186,13 +186,13 @@ class ISCClient:
             return resp
 
         if resp.status_code == 403:
-            raise ISCPermissionDenied(
+            raise ISCPermissionDeniedError(
                 f"Permission denied: {path}\n"
                 "Check that your API client has all required scopes (see README)."
             )
 
         if resp.status_code in (404, 501):
-            raise ISCEndpointUnavailable(
+            raise ISCEndpointUnavailableError(
                 f"Endpoint unavailable: {path} (HTTP {resp.status_code}). "
                 "This endpoint may be experimental or not enabled on this tenant tier."
             )
@@ -205,7 +205,7 @@ class ISCClient:
                 retry_after = 5
             logger.warning("Rate limited by ISC. Waiting %ds before retry.", retry_after)
             time.sleep(retry_after)
-            raise ISCRateLimitExceeded(f"Rate limited on {path}")
+            raise ISCRateLimitExceededError(f"Rate limited on {path}")
 
         if resp.status_code >= 500:
             raise ISCServerError(f"Server error {resp.status_code} on {path}")
@@ -306,7 +306,7 @@ class ISCClient:
         return self.get_all("/v3/non-employee-records")
 
     def get_machine_identities(self) -> list[dict[str, Any]]:
-        """Experimental endpoint — collectors must handle ISCEndpointUnavailable."""
+        """Experimental endpoint — collectors must handle ISCEndpointUnavailableError."""
         return self.get_all("/beta/machine-identities")
 
     # ------------------------------------------------------------------

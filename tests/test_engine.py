@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from auditor.models import Finding, Severity, TenantHealthScore
+from auditor.models import Finding, TenantHealthScore
 
 
 class TestSuppressedFindingsPreservedThroughAI:
@@ -257,7 +257,9 @@ class TestNoAiCliWiring:
         is unset. This proves the CLI wiring is intact end-to-end.
         """
         from unittest.mock import MagicMock, patch
+
         from click.testing import CliRunner
+
         from auditor.cli import main
 
         monkeypatch.setenv("ISC_TENANT_URL",    "https://acme.identitynow.com")
@@ -299,8 +301,10 @@ class TestNoAiCliWiring:
         When --no-ai is passed, AuditorConfig.from_env must be called
         with require_ai=False. This directly tests the wiring.
         """
-        from unittest.mock import MagicMock, patch, call
+        from unittest.mock import MagicMock, patch
+
         from click.testing import CliRunner
+
         from auditor.cli import main
         from auditor.config import AuditorConfig
 
@@ -327,7 +331,12 @@ class TestNoAiCliWiring:
         mock_result.health_score.coverage_confidence.score_display = 70
         mock_result.detector_coverage = []
 
-        with patch.object(AuditorConfig, "from_env", return_value=mock_config) as mock_from_env,              patch("auditor.engine.run_audit", return_value=mock_result):
+        with (
+            patch.object(
+                AuditorConfig, "from_env", return_value=mock_config,
+            ) as mock_from_env,
+            patch("auditor.engine.run_audit", return_value=mock_result),
+        ):
             runner = CliRunner()
             runner.invoke(main, ["run", "--all", "--no-ai"])
 

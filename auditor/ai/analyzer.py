@@ -42,7 +42,7 @@ def _build_system_prompt() -> str:
         "SailPoint Identity Security Cloud (ISC).\n\n"
         "Your role:\n"
         "1. Explain why each finding matters — for both engineers and business stakeholders.\n"
-        "2. Describe the blast radius: what could an attacker reach if this finding were exploited?\n"
+        "2. Describe the blast radius: what could an attacker reach if exploited?\n"
         "3. Suggest remediation priority and first steps.\n"
         "4. Write a concise auditor-ready note suitable for a SOX/SOC2/HIPAA audit package.\n\n"
         "Rules:\n"

@@ -37,11 +37,11 @@ logger = logging.getLogger(__name__)
 # Known toxic combinations even without a formal SOD policy
 # Format: (entitlement_keyword_a, entitlement_keyword_b, description)
 KNOWN_TOXIC_COMBOS = [
-    ("payroll", "gl posting",      "Payroll + GL Posting — classic segregation of duties violation"),
+    ("payroll", "gl posting", "Payroll + GL Posting — classic segregation of duties violation"),
     ("payroll", "finance admin",   "Payroll + Finance Admin — ability to pay and approve payments"),
     ("iam admin", "audit",         "IAM Admin + Audit — ability to manage and audit own access"),
     ("create user", "approve",     "User creation + approval — self-approval of privileged access"),
-    ("deploy", "approve deploy",   "Deploy + Approve Deploy — ability to self-approve production changes"),
+    ("deploy", "approve deploy", "Deploy + Approve Deploy — self-approve production changes"),
     ("hr admin", "payroll",        "HR Admin + Payroll — full compensation chain control"),
 ]
 
@@ -79,7 +79,11 @@ def detect_ar_01(
         identity = violation.get("identity") or {}
         iid      = identity.get("id", "unknown")
         iname    = identity.get("name") or identity.get("displayName") or iid
-        policy_name = violation.get("policyName") or violation.get("policy", {}).get("name") or "Unknown policy"
+        policy_name = (
+            violation.get("policyName")
+            or violation.get("policy", {}).get("name")
+            or "Unknown policy"
+        )
         created  = violation.get("created")
 
         conflicting = violation.get("conflictingEntitlements") or []
@@ -181,9 +185,9 @@ def detect_ar_02(
                             "description": description,
                         },
                         recommended_fix=(
-                            f"Review and remediate. Consider formalizing this combination "
-                            f"as an SOD policy in ISC so future violations are automatically "
-                            f"detected and prevented."
+                            "Review and remediate. Consider formalizing this combination "
+                            "as an SOD policy in ISC so future violations are automatically "
+                            "detected and prevented."
                         ),
                         collection_status=CollectionStatus.FULL,
                         confidence=0.75,
@@ -437,9 +441,10 @@ def detect_ar_05(
                 why_fired=(
                     f"{obj_type.replace('_', ' ').title()} '{obj_name}' contains "
                     f"{len(ents)} entitlements"
-                    f"{f', including {len(sensitive_ents)} sensitive ones' if sensitive_ents else ''}. "
-                    f"Oversized roles violate least-privilege, are difficult to certify "
-                    f"meaningfully, and create a large blast radius if misassigned."
+                    + (f", including {len(sensitive_ents)} sensitive ones"
+                       if sensitive_ents else "")
+                    + ". Oversized roles violate least-privilege, are difficult to certify "
+                    "meaningfully, and create a large blast radius if misassigned."
                 ),
                 source_data={
                     "entitlement_count": len(ents),

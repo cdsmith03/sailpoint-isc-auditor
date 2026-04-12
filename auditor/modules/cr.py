@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..client import ISCClient
 from ..config import PolicyPack
@@ -48,7 +48,7 @@ def _days_since(date_str: str | None) -> int | None:
         return None
     try:
         dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-        return (datetime.now(timezone.utc) - dt).days
+        return (datetime.now(UTC) - dt).days
     except (ValueError, TypeError):
         return None
 
@@ -153,7 +153,10 @@ def detect_cr_02(
                 detector_id=detector_id,
                 family=ControlFamily.CR,
                 status=CollectionStatus.FULL,
-                title=f"Source not recently aggregated{'  [critical source]' if is_critical else ''}",
+                title=(
+                    f"Source not recently aggregated"
+                    f"{'  [critical source]' if is_critical else ''}"
+                ),
                 severity=Severity.HIGH if is_critical else Severity.MEDIUM,
                 evidence=FindingEvidence(
                     affected_object_ids=[sid],
@@ -162,9 +165,11 @@ def detect_cr_02(
                     why_fired=(
                         f"Source '{sname}' was last successfully aggregated {days} days ago "
                         f"(threshold: {threshold} days). "
-                        f"{'This is a critical source — stale data here has the highest impact. ' if is_critical else ''}"
+                        f"{'This is a critical source — ' if is_critical else ''}"
+                        f"{'stale data here has the highest impact. ' if is_critical else ''}"
                         f"Account data from this source may not reflect the current state "
-                        f"in the target system, making all downstream governance decisions unreliable."
+                        "in the target system, making all downstream "
+                        "governance decisions unreliable."
                     ),
                     source_data={
                         "last_aggregation": last_agg,
@@ -189,7 +194,10 @@ def detect_cr_02(
         eligible_count=eligible,
         affected_count=len(findings),
     )
-    logger.info(f"  {detector_id}: {len(findings)} stale sources / {eligible} sources with agg date")
+    logger.info(
+        "  %s: %d stale sources / %d sources with agg date",
+        detector_id, len(findings), eligible,
+    )
     return findings, coverage
 
 
@@ -210,7 +218,7 @@ def detect_cr_03(
     detector_id = "CR-03"
     eligible    = 0
 
-    STUCK_THRESHOLD_HOURS = 24
+    stuck_threshold_hours = 24
 
     for activity in account_activities:
         status = (activity.get("status") or "").upper()
@@ -226,11 +234,11 @@ def detect_cr_03(
         if created:
             try:
                 dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
-                hours_old = (datetime.now(timezone.utc) - dt).total_seconds() / 3600
+                hours_old = (datetime.now(UTC) - dt).total_seconds() / 3600
             except (ValueError, TypeError):
                 pass
 
-        if hours_old is not None and hours_old < STUCK_THRESHOLD_HOURS:
+        if hours_old is not None and hours_old < stuck_threshold_hours:
             continue   # Give recent activities time to complete
 
         identity_name = (activity.get("identity") or {}).get("name") or "unknown identity"
@@ -365,7 +373,10 @@ def detect_cr_04(
         eligible_count=eligible,
         affected_count=len(findings),
     )
-    logger.info(f"  {detector_id}: {len(findings)} failed deprovisions / {eligible} deprovision ops")
+    logger.info(
+        "  %s: %d failed deprovisions / %d deprovision ops",
+        detector_id, len(findings), eligible,
+    )
     return findings, coverage
 
 
@@ -395,7 +406,10 @@ def detect_cr_05(
         eligible += 1
 
         # But the native identity attribute or last aggregated state shows enabled
-        native_enabled = acct.get("nativeIdentity") and acct.get("attributes", {}).get("active") is True
+        native_enabled = (
+            acct.get("nativeIdentity") and
+            acct.get("attributes", {}).get("active") is True
+        )
         raw_enabled    = acct.get("attributes", {}).get("enabled") is True
 
         if native_enabled or raw_enabled:
@@ -606,7 +620,10 @@ def detect_cr_07(
         eligible_count=eligible,
         affected_count=len(findings),
     )
-    logger.info(f"  {detector_id}: {len(findings)} undergovemed critical sources / {eligible} critical")
+    logger.info(
+        "  %s: %d undergoverned critical sources / %d critical",
+        detector_id, len(findings), eligible,
+    )
     return findings, coverage
 
 
@@ -722,7 +739,10 @@ def run_cr_detectors(
         (detect_cr_01, {"sources": sources, "policy": policy}),
         (detect_cr_02, {"sources": sources, "policy": policy}),
         (detect_cr_03, {"account_activities": account_activities, "policy": policy}),
-        (detect_cr_04, {"account_activities": account_activities, "accounts": accounts, "policy": policy}),
+        (detect_cr_04, {
+            "account_activities": account_activities,
+            "accounts": accounts, "policy": policy,
+        }),
         (detect_cr_05, {"accounts": accounts, "policy": policy}),
         (detect_cr_06, {"sources": sources, "accounts": accounts, "policy": policy}),
         (detect_cr_07, {"sources": sources, "certifications": certifications, "policy": policy}),

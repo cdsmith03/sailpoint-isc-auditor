@@ -14,7 +14,7 @@ Run order:
 from __future__ import annotations
 
 import logging
-from typing import Callable
+from collections.abc import Callable
 
 from .client import ISCClient
 from .config import AuditorConfig, PolicyPack
@@ -258,8 +258,8 @@ def _compute_critical_sources_signal(client: ISCClient, policy: PolicyPack) -> f
         logger.warning("Coverage: could not fetch sources for critical_sources signal: %s", exc)
         return 0.0
 
-    from datetime import datetime, timezone
-    now = datetime.now(timezone.utc)
+    from datetime import UTC, datetime
+    now = datetime.now(UTC)
 
     source_map = {s.get("name", ""): s for s in sources}
     connected = 0
@@ -331,7 +331,9 @@ def _compute_privileged_app_governance_signal(
     try:
         certifications = client.get_certifications()
     except Exception as exc:
-        logger.warning("Coverage: could not fetch certifications for privileged_apps signal: %s", exc)
+        logger.warning(
+            "Coverage: could not fetch certifications for privileged_apps signal: %s", exc
+        )
         return 0.0
 
     # Collect source/app names referenced in active certifications
@@ -366,7 +368,7 @@ def _compute_lifecycle_coverage_signal(client: ISCClient) -> float:
     Required: manager, department, employmentType.
     Samples up to 500 identities to avoid long fetch times.
     """
-    REQUIRED = ("manager", "department", "employmentType")
+    required_attrs = ("manager", "department", "employmentType")
 
     try:
         identities = client.get_all("/v3/identities", max_records=500)
@@ -382,7 +384,7 @@ def _compute_lifecycle_coverage_signal(client: ISCClient) -> float:
         attrs = identity.get("attributes") or {}
         has_all = all(
             identity.get(attr) or attrs.get(attr)
-            for attr in REQUIRED
+            for attr in required_attrs
         )
         if has_all:
             complete += 1

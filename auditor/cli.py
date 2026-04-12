@@ -20,18 +20,17 @@ from datetime import datetime
 from pathlib import Path
 
 import click
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
-from rich import box
-from rich.text import Text
 
 from . import __version__
 from .config import AuditorConfig, PolicyPack
+from .models import HealthBand, Severity
 
 logger = logging.getLogger(__name__)
-from .models import HealthBand, Severity
 
 console = Console()
 
@@ -70,7 +69,8 @@ def _print_header(tenant_url: str, version: str = __version__) -> None:
 
 def _print_health_score(health) -> None:
     band_color = BAND_COLORS.get(health.band, "white")
-    score_text = f"[{band_color}]{health.tenant_health:.0f} / 100  ({health.band.value.upper()})[/{band_color}]"
+    band_label = health.band.value.upper()
+    score_text = f"[{band_color}]{health.tenant_health:.0f} / 100  ({band_label})[/{band_color}]"
 
     trend_str = ""
     if health.trend is not None:
@@ -80,7 +80,8 @@ def _print_health_score(health) -> None:
 
     console.rule()
     console.print(f"  TENANT HEALTH SCORE: {score_text}{trend_str}")
-    console.print(f"  [dim]Coverage confidence: {health.coverage_confidence.score_display}/100[/dim]")
+    cov = health.coverage_confidence.score_display
+    console.print(f"  [dim]Coverage confidence: {cov}/100[/dim]")
     console.rule()
     console.print()
 
@@ -157,9 +158,12 @@ def main() -> None:
 
 @main.command()
 @click.option("--all",   "run_all",  is_flag=True,  help="Run all detectors")
-@click.option("--families",          multiple=True,  help="Run specific families: MI IH LI AR GQ CR")
+@click.option("--families", multiple=True, help="Run specific families: MI IH LI AR GQ CR")
 @click.option("--detectors",         multiple=True,  help="Run specific detectors: MI-01 LI-05 ...")
-@click.option("--output",            default="terminal", type=click.Choice(["terminal", "html", "json"]))
+@click.option(
+    "--output", default="terminal",
+    type=click.Choice(["terminal", "html", "json"])
+)
 @click.option("--out",               default=None,   help="Output file path")
 @click.option("--policy-pack",       default=None,   help="Path to custom policy pack YAML")
 @click.option("--no-ai",             is_flag=True,   help="Skip Claude AI analysis (faster)")
@@ -188,7 +192,7 @@ def run(
     # Load config — Anthropic key is only required when AI analysis is enabled
     try:
         config = AuditorConfig.from_env(require_ai=not no_ai)
-    except EnvironmentError as e:
+    except OSError as e:
         console.print(f"[red]Configuration error:[/red] {e}")
         sys.exit(1)
 
@@ -251,7 +255,10 @@ def run(
 @click.option("--reason",     required=True,  help="Why this finding is suppressed")
 @click.option("--ticket",     default=None,   help="Ticket reference e.g. JIRA-4521")
 @click.option("--expires",    default=None,   help="Expiry date YYYY-MM-DD")
-def suppress(detector_id: str, object_id: str, reason: str, ticket: str | None, expires: str | None) -> None:
+def suppress(
+    detector_id: str, object_id: str, reason: str,
+    ticket: str | None, expires: str | None,
+) -> None:
     """Suppress a finding with a reason and optional expiry."""
     from .suppressions import add_suppression
     add_suppression(detector_id, object_id, reason, ticket, expires)

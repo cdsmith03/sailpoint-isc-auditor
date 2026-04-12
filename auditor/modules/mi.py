@@ -20,7 +20,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..client import ISCClient, ISCEndpointUnavailable, ISCPermissionDenied
 from ..config import PolicyPack
@@ -48,7 +48,7 @@ def _days_since(date_str: str | None) -> int | None:
         return None
     try:
         dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-        return (datetime.now(timezone.utc) - dt).days
+        return (datetime.now(UTC) - dt).days
     except (ValueError, TypeError):
         return None
 
@@ -191,7 +191,10 @@ def detect_mi_01(
         affected_count=len(findings),
         warning=machine_identities.warning,
     )
-    logger.info(f"  {detector_id}: {len(findings)} findings / {len(machine_identities.data)} eligible")
+    logger.info(
+        "  %s: %d findings / %d eligible",
+        detector_id, len(findings), len(machine_identities.data),
+    )
     return findings, coverage
 
 
@@ -298,7 +301,10 @@ def detect_mi_02(
         affected_count=len(findings),
         warning=machine_identities.warning,
     )
-    logger.info(f"  {detector_id}: {len(findings)} findings / {len(machine_identities.data)} eligible")
+    logger.info(
+        "  %s: %d findings / %d eligible",
+        detector_id, len(findings), len(machine_identities.data),
+    )
     return findings, coverage
 
 
@@ -360,9 +366,9 @@ def detect_mi_03(
                         "ever_reviewed": False,
                     },
                     recommended_fix=(
-                        f"Disable this identity immediately and investigate whether it "
-                        f"is still needed. If not, decommission and revoke all "
-                        f"associated credentials. Schedule for formal offboarding."
+                        "Disable this identity immediately and investigate whether it "
+                        "is still needed. If not, decommission and revoke all "
+                        "associated credentials. Schedule for formal offboarding."
                     ),
                     collection_status=machine_identities.status,
                     confidence=confidence,
@@ -478,7 +484,9 @@ def detect_mi_05(
         name    = acct.get("name") or acct.get("displayName") or ""
         enabled = acct.get("enabled", acct.get("status") == "ENABLED")
 
-        if not (bg_pattern.match(name) or "breakglass" in name.lower() or "break-glass" in name.lower()):
+        name_lower = name.lower()
+        is_bg = bg_pattern.match(name) or "breakglass" in name_lower or "break-glass" in name_lower
+        if not is_bg:
             continue
 
         eligible += 1
@@ -597,7 +605,8 @@ def detect_mi_06(
                     },
                     recommended_fix=(
                         f"Add the missing attributes: {', '.join(missing)}. "
-                        f"Ensure the name follows the '{policy.naming_conventions.get('service_accounts')}' "
+                        f"Ensure the name follows the "
+                        f"'{policy.naming_conventions.get('service_accounts')}' "
                         f"convention defined in your policy pack."
                     ),
                     collection_status=machine_identities.status,
@@ -613,7 +622,10 @@ def detect_mi_06(
         affected_count=len(findings),
         warning=machine_identities.warning,
     )
-    logger.info(f"  {detector_id}: {len(findings)} findings / {len(machine_identities.data)} eligible")
+    logger.info(
+        "  %s: %d findings / %d eligible",
+        detector_id, len(findings), len(machine_identities.data),
+    )
     return findings, coverage
 
 
@@ -682,7 +694,10 @@ def detect_mi_07(
         affected_count=len(findings),
         warning=machine_identities.warning,
     )
-    logger.info(f"  {detector_id}: {len(findings)} findings / {len(machine_identities.data)} eligible")
+    logger.info(
+        "  %s: %d findings / %d eligible",
+        detector_id, len(findings), len(machine_identities.data),
+    )
     return findings, coverage
 
 

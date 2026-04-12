@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..client import ISCClient
 from ..config import PolicyPack
@@ -47,7 +47,7 @@ def _days_since(date_str: str | None) -> int | None:
         return None
     try:
         dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-        return (datetime.now(timezone.utc) - dt).days
+        return (datetime.now(UTC) - dt).days
     except (ValueError, TypeError):
         return None
 
@@ -227,8 +227,8 @@ def detect_gq_03(
     detector_id = "GQ-03"
     eligible = 0
 
-    FAST_APPROVAL_SECONDS = 30    # less than 30s per decision = suspicious
-    HIGH_APPROVE_RATE     = 0.98  # 98%+ approve rate on large campaigns
+    fast_approval_seconds = 30    # less than 30s per decision = suspicious
+    high_approve_rate     = 0.98  # 98%+ approve rate on large campaigns
 
     for cert in certifications:
         status = (cert.get("status") or "").upper()
@@ -250,7 +250,7 @@ def detect_gq_03(
         approve_rate = approved_items / total_items if total_items else 0
         issues = []
 
-        if approve_rate >= HIGH_APPROVE_RATE and total_items >= 20:
+        if approve_rate >= high_approve_rate and total_items >= 20:
             issues.append(
                 f"{approve_rate*100:.1f}% approval rate across {total_items} items "
                 f"({revoked_items} revocations)"
@@ -258,10 +258,10 @@ def detect_gq_03(
 
         if duration_secs and total_items:
             avg_secs = duration_secs / total_items
-            if avg_secs < FAST_APPROVAL_SECONDS:
+            if avg_secs < fast_approval_seconds:
                 issues.append(
                     f"Average {avg_secs:.0f}s per decision "
-                    f"(threshold: {FAST_APPROVAL_SECONDS}s)"
+                    f"(threshold: {fast_approval_seconds}s)"
                 )
 
         if issues:
@@ -286,7 +286,10 @@ def detect_gq_03(
                         "approved_items": approved_items,
                         "revoked_items": revoked_items,
                         "approve_rate": approve_rate,
-                        "avg_seconds_per_decision": duration_secs / total_items if duration_secs and total_items else None,
+                        "avg_seconds_per_decision": (
+                            duration_secs / total_items
+                            if duration_secs and total_items else None
+                        ),
                     },
                     recommended_fix=(
                         "Review the certification design. Consider AI-assisted "
@@ -467,7 +470,6 @@ def detect_gq_06(
             eligible += 1
             reviewer_id  = (item.get("reviewer") or {}).get("id")
             subject_id   = (item.get("subject") or item.get("identity") or {}).get("id")
-            requester_id = (item.get("requestedBy") or {}).get("id")
 
             if not reviewer_id:
                 continue
@@ -496,7 +498,8 @@ def detect_gq_06(
                         recommended_fix=(
                             "Reassign this review item to an independent reviewer — "
                             "the subject's manager, or a designated compliance approver. "
-                            "Update the certification workflow to prevent self-reviews automatically."
+                            "Update the certification workflow to "
+                            "prevent self-reviews automatically."
                         ),
                         collection_status=CollectionStatus.FULL,
                         confidence=0.90,
@@ -555,7 +558,10 @@ def detect_gq_07(
                         f"cannot make informed approve/revoke decisions without knowing "
                         f"what access this object grants and why it exists."
                     ),
-                    source_data={"has_description": bool(description), "description_length": len(description)},
+                    source_data={
+                        "has_description": bool(description),
+                        "description_length": len(description),
+                    },
                     recommended_fix=(
                         f"Add a clear business-language description to '{obj_name}' that "
                         f"explains: what access it grants, who should have it, and why it exists."
@@ -672,7 +678,10 @@ def run_gq_detectors(
         (detect_gq_01, {"certifications": certifications, "policy": policy}),
         (detect_gq_02, {"certifications": certifications, "roles": roles, "policy": policy}),
         (detect_gq_03, {"certifications": certifications, "policy": policy}),
-        (detect_gq_04, {"roles": roles, "access_profiles": access_profiles, "sources": sources, "policy": policy}),
+        (detect_gq_04, {
+            "roles": roles, "access_profiles": access_profiles,
+            "sources": sources, "policy": policy,
+        }),
         (detect_gq_05, {"governance_groups": governance_groups, "policy": policy}),
         (detect_gq_06, {"certifications": certifications, "policy": policy}),
         (detect_gq_07, {"roles": roles, "access_profiles": access_profiles, "policy": policy}),
