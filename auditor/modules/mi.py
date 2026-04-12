@@ -484,7 +484,8 @@ def detect_mi_05(
         name    = acct.get("name") or acct.get("displayName") or ""
         enabled = acct.get("enabled", acct.get("status") == "ENABLED")
 
-        is_bg = bg_pattern.match(name) or "breakglass" in name.lower() or "break-glass" in name.lower()
+        name_lower = name.lower()
+        is_bg = bg_pattern.match(name) or "breakglass" in name_lower or "break-glass" in name_lower
         if not is_bg:
             continue
 

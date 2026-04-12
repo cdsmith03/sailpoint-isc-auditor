@@ -492,9 +492,13 @@ def detect_li_05(
                     why_fired=(
                         f"Non-employee '{ne_name}' passed their contract end date "
                         f"{days_past} days ago (grace period: {grace_days} days) and "
-                        f"{'still has ' + str(len(active_accounts)) + ' active account(s)' if active_accounts else 'the non-employee record is still active'}. "
-                        f"Expired contractors with active access represent a direct "
-                        f"compliance violation in most regulatory frameworks."
+                        + (
+                            f"still has {len(active_accounts)} active account(s)"
+                            if active_accounts
+                            else "the non-employee record is still active"
+                        )
+                        + ". Expired contractors with active access represent a direct "
+                        "compliance violation in most regulatory frameworks."
                     ),
                     source_data={
                         "end_date": end_date,
