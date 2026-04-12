@@ -45,9 +45,13 @@ jobs:
         run: |
           python -m compileall -q auditor tests
 
+      - name: Lint with Ruff
+        run: |
+          python -m ruff check auditor tests
+
       - name: Run tests
         run: |
-          python -m pytest tests -v --tb=short --maxfail=1
+          python -m pytest --maxfail=1
 
       - name: Check for hardcoded credentials
         shell: bash
