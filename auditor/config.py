@@ -82,7 +82,7 @@ class PolicyPack(BaseModel):
     detector_overrides: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "PolicyPack":
+    def from_yaml(cls, path: str | Path) -> PolicyPack:
         """Load a policy pack from a YAML file.
 
         Supports two formats — both load identically:
