@@ -162,9 +162,17 @@ def main() -> None:
 @click.option("--detectors",         multiple=True,  help="Run specific detectors: MI-01 LI-05 ...")
 @click.option(
     "--output", default="terminal",
-    type=click.Choice(["terminal", "html", "json"])
+    type=click.Choice(["terminal", "html", "json"]),
+    help=(
+        "Output format. 'html' writes a self-contained report. "
+        "'json' writes two files: a full audit document (.json) "
+        "and a per-finding NDJSON file (.ndjson) for SIEM ingestion."
+    ),
 )
-@click.option("--out",               default=None,   help="Output file path")
+@click.option(
+    "--out", default=None,
+    help="Output file path (base path for json — extensions added automatically)",
+)
 @click.option("--policy-pack",       default=None,   help="Path to custom policy pack YAML")
 @click.option("--no-ai",             is_flag=True,   help="Skip Claude AI analysis (faster)")
 @click.option("--verbose", "-v",     is_flag=True,   help="Verbose logging")
@@ -238,10 +246,13 @@ def run(
         console.print(f"  [green]HTML report written to: {path}[/green]")
 
     elif output == "json":
-        path = out or f"audit_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.json"
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(result.model_dump(mode="json"), f, indent=2, default=str)
-        console.print(f"  [green]JSON findings written to: {path}[/green]")
+        from .reporters.json_reporter import generate_json_report
+        base = out or f"audit_{datetime.now().strftime('%Y-%m-%d_%H-%M')}"
+        # Strip .json extension if user provided it — reporter adds extensions
+        base = base.removesuffix(".json").removesuffix(".ndjson")
+        report_path, ndjson_path = generate_json_report(result, Path(base))
+        console.print(f"  [green]JSON report written to:   {report_path}[/green]")
+        console.print(f"  [green]NDJSON findings written to: {ndjson_path}[/green]")
 
     # Save history for trend tracking
     _save_history(config, result)
