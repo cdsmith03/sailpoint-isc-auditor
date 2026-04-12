@@ -146,10 +146,13 @@ def run_audit(
         result.health_score = compute_tenant_health(result, eligible_by_detector)
 
         # AI analysis
+        # analyze_findings() mutates finding objects in-place — do NOT reassign
+        # result.findings here or suppressed findings will be silently dropped
+        # from the output. The full list (active + suppressed) must stay intact.
         if run_ai and all_findings:
             progress("Analyzing findings with Claude AI...")
             from .ai.analyzer import analyze_findings
-            result.findings = analyze_findings(
+            analyze_findings(
                 findings=[f for f in all_findings if not f.suppressed],
                 config=config,
                 health_score=result.health_score,
