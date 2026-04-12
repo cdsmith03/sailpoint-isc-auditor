@@ -16,13 +16,13 @@ from auditor.models import (
     ControlFamily,
     CoverageConfidence,
     DetectorCoverage,
+    FamilyScore,
     Finding,
     FindingEvidence,
     HealthBand,
     RiskScore,
     Severity,
     Suppression,
-    FamilyScore,
     TenantHealthScore,
 )
 

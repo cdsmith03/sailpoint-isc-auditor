@@ -153,7 +153,10 @@ def detect_cr_02(
                 detector_id=detector_id,
                 family=ControlFamily.CR,
                 status=CollectionStatus.FULL,
-                title=f"Source not recently aggregated{'  [critical source]' if is_critical else ''}",
+                title=(
+                    f"Source not recently aggregated"
+                    f"{'  [critical source]' if is_critical else ''}"
+                ),
                 severity=Severity.HIGH if is_critical else Severity.MEDIUM,
                 evidence=FindingEvidence(
                     affected_object_ids=[sid],
@@ -162,9 +165,11 @@ def detect_cr_02(
                     why_fired=(
                         f"Source '{sname}' was last successfully aggregated {days} days ago "
                         f"(threshold: {threshold} days). "
-                        f"{'This is a critical source — stale data here has the highest impact. ' if is_critical else ''}"
+                        f"{'This is a critical source — ' if is_critical else ''}"
+                        f"{'stale data here has the highest impact. ' if is_critical else ''}"
                         f"Account data from this source may not reflect the current state "
-                        f"in the target system, making all downstream governance decisions unreliable."
+                        "in the target system, making all downstream "
+                        "governance decisions unreliable."
                     ),
                     source_data={
                         "last_aggregation": last_agg,
@@ -189,7 +194,10 @@ def detect_cr_02(
         eligible_count=eligible,
         affected_count=len(findings),
     )
-    logger.info("  %s: %d stale sources / %d sources with agg date", detector_id, len(findings), eligible)
+    logger.info(
+        "  %s: %d stale sources / %d sources with agg date",
+        detector_id, len(findings), eligible,
+    )
     return findings, coverage
 
 
@@ -365,7 +373,10 @@ def detect_cr_04(
         eligible_count=eligible,
         affected_count=len(findings),
     )
-    logger.info("  %s: %d failed deprovisions / %d deprovision ops", detector_id, len(findings), eligible)
+    logger.info(
+        "  %s: %d failed deprovisions / %d deprovision ops",
+        detector_id, len(findings), eligible,
+    )
     return findings, coverage
 
 
@@ -609,7 +620,10 @@ def detect_cr_07(
         eligible_count=eligible,
         affected_count=len(findings),
     )
-    logger.info("  %s: %d undergoverned critical sources / %d critical", detector_id, len(findings), eligible)
+    logger.info(
+        "  %s: %d undergoverned critical sources / %d critical",
+        detector_id, len(findings), eligible,
+    )
     return findings, coverage
 
 

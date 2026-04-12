@@ -498,7 +498,8 @@ def detect_gq_06(
                         recommended_fix=(
                             "Reassign this review item to an independent reviewer — "
                             "the subject's manager, or a designated compliance approver. "
-                            "Update the certification workflow to prevent self-reviews automatically."
+                            "Update the certification workflow to "
+                            "prevent self-reviews automatically."
                         ),
                         collection_status=CollectionStatus.FULL,
                         confidence=0.90,

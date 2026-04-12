@@ -824,7 +824,12 @@ function renderFindings(list) {{
         td.appendChild(t(f.objects));
         return td;
       }},
-      () => {{ const td = document.createElement('td'); td.style.cssText=`font-weight:700;color:${{riskColor(f.risk)}}`; td.appendChild(t(String(f.risk))); return td; }},
+      () => {{
+        const td = document.createElement('td');
+        td.style.cssText = `font-weight:700;color:${{riskColor(f.risk)}}`;
+        td.appendChild(t(String(f.risk)));
+        return td;
+      }},
     ];
     cells.forEach(fn => tr.appendChild(fn()));
     tbody.appendChild(tr);

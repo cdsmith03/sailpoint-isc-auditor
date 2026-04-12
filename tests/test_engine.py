@@ -256,8 +256,9 @@ class TestNoAiCliWiring:
         isc-audit run --all --no-ai must not fail when ANTHROPIC_API_KEY
         is unset. This proves the CLI wiring is intact end-to-end.
         """
-        from click.testing import CliRunner
         from unittest.mock import MagicMock, patch
+
+        from click.testing import CliRunner
 
         from auditor.cli import main
 
@@ -300,8 +301,9 @@ class TestNoAiCliWiring:
         When --no-ai is passed, AuditorConfig.from_env must be called
         with require_ai=False. This directly tests the wiring.
         """
-        from click.testing import CliRunner
         from unittest.mock import MagicMock, patch
+
+        from click.testing import CliRunner
 
         from auditor.cli import main
         from auditor.config import AuditorConfig
@@ -329,7 +331,12 @@ class TestNoAiCliWiring:
         mock_result.health_score.coverage_confidence.score_display = 70
         mock_result.detector_coverage = []
 
-        with patch.object(AuditorConfig, "from_env", return_value=mock_config) as mock_from_env,              patch("auditor.engine.run_audit", return_value=mock_result):
+        with (
+            patch.object(
+                AuditorConfig, "from_env", return_value=mock_config,
+            ) as mock_from_env,
+            patch("auditor.engine.run_audit", return_value=mock_result),
+        ):
             runner = CliRunner()
             runner.invoke(main, ["run", "--all", "--no-ai"])
 

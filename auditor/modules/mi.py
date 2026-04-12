@@ -191,7 +191,10 @@ def detect_mi_01(
         affected_count=len(findings),
         warning=machine_identities.warning,
     )
-    logger.info("  %s: %d findings / %d eligible", detector_id, len(findings), len(machine_identities.data))
+    logger.info(
+        "  %s: %d findings / %d eligible",
+        detector_id, len(findings), len(machine_identities.data),
+    )
     return findings, coverage
 
 
@@ -298,7 +301,10 @@ def detect_mi_02(
         affected_count=len(findings),
         warning=machine_identities.warning,
     )
-    logger.info("  %s: %d findings / %d eligible", detector_id, len(findings), len(machine_identities.data))
+    logger.info(
+        "  %s: %d findings / %d eligible",
+        detector_id, len(findings), len(machine_identities.data),
+    )
     return findings, coverage
 
 
@@ -478,7 +484,8 @@ def detect_mi_05(
         name    = acct.get("name") or acct.get("displayName") or ""
         enabled = acct.get("enabled", acct.get("status") == "ENABLED")
 
-        if not (bg_pattern.match(name) or "breakglass" in name.lower() or "break-glass" in name.lower()):
+        is_bg = bg_pattern.match(name) or "breakglass" in name.lower() or "break-glass" in name.lower()
+        if not is_bg:
             continue
 
         eligible += 1
@@ -597,7 +604,8 @@ def detect_mi_06(
                     },
                     recommended_fix=(
                         f"Add the missing attributes: {', '.join(missing)}. "
-                        f"Ensure the name follows the '{policy.naming_conventions.get('service_accounts')}' "
+                        f"Ensure the name follows the "
+                        f"'{policy.naming_conventions.get('service_accounts')}' "
                         f"convention defined in your policy pack."
                     ),
                     collection_status=machine_identities.status,
@@ -613,7 +621,10 @@ def detect_mi_06(
         affected_count=len(findings),
         warning=machine_identities.warning,
     )
-    logger.info("  %s: %d findings / %d eligible", detector_id, len(findings), len(machine_identities.data))
+    logger.info(
+        "  %s: %d findings / %d eligible",
+        detector_id, len(findings), len(machine_identities.data),
+    )
     return findings, coverage
 
 
@@ -682,7 +693,10 @@ def detect_mi_07(
         affected_count=len(findings),
         warning=machine_identities.warning,
     )
-    logger.info("  %s: %d findings / %d eligible", detector_id, len(findings), len(machine_identities.data))
+    logger.info(
+        "  %s: %d findings / %d eligible",
+        detector_id, len(findings), len(machine_identities.data),
+    )
     return findings, coverage
 
 

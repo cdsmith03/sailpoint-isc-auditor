@@ -506,7 +506,10 @@ def detect_ih_06(
         eligible_count=eligible,
         affected_count=len(findings),
     )
-    logger.info("  %s: %d findings from %d stale sources", detector_id, len(findings), len(stale_sources))
+    logger.info(
+        "  %s: %d findings from %d stale sources",
+        detector_id, len(findings), len(stale_sources),
+    )
     return findings, coverage
 
 

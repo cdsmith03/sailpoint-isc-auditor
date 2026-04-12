@@ -612,7 +612,10 @@ def detect_li_06(
         eligible_count=eligible,
         affected_count=len(findings),
     )
-    logger.info("  %s: %d findings / %d identities with auth status", detector_id, len(findings), eligible)
+    logger.info(
+        "  %s: %d findings / %d identities with auth status",
+        detector_id, len(findings), eligible,
+    )
     return findings, coverage
 
 
@@ -640,8 +643,16 @@ def run_li_detectors(
     all_findings: list[Finding]          = []
     all_coverage: list[DetectorCoverage] = []
 
-    id_kwargs  = {"identities": identities, "accounts_by_identity": accounts_by_identity, "policy": policy}
-    ne_kwargs  = {"non_employees": non_employees, "accounts_by_identity": accounts_by_identity, "policy": policy}
+    id_kwargs = {
+        "identities": identities,
+        "accounts_by_identity": accounts_by_identity,
+        "policy": policy,
+    }
+    ne_kwargs = {
+        "non_employees": non_employees,
+        "accounts_by_identity": accounts_by_identity,
+        "policy": policy,
+    }
 
     for detector_fn, kwargs in [
         (detect_li_01, id_kwargs),
