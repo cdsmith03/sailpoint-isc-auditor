@@ -32,7 +32,6 @@ from .models import (
     CriticalCondition,
     FamilyScore,
     Finding,
-    HealthBand,
     RiskScore,
     Severity,
     TenantHealthScore,
@@ -258,7 +257,12 @@ def compute_family_score(
 
     score = max(0.0, score)
 
-    all_findings = [f for flist in [findings_by_detector.get(d, []) for d in FAMILY_DETECTOR_MAP.get(family, [])] for f in flist]
+    family_detectors = FAMILY_DETECTOR_MAP.get(family, [])
+    all_findings = [
+        f
+        for det_id in family_detectors
+        for f in findings_by_detector.get(det_id, [])
+    ]
     active   = [f for f in all_findings if not f.suppressed]
     critical = sum(1 for f in active if f.severity == Severity.CRITICAL)
     high     = sum(1 for f in active if f.severity == Severity.HIGH)

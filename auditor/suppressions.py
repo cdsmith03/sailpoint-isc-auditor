@@ -19,8 +19,7 @@ from __future__ import annotations
 
 import json
 import logging
-import stat
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -65,8 +64,8 @@ def _is_expired(record: dict) -> bool:
         expires = datetime.fromisoformat(exp)
         # Make expires timezone-aware if it is naive (legacy records).
         if expires.tzinfo is None:
-            expires = expires.replace(tzinfo=timezone.utc)
-        return expires < datetime.now(timezone.utc)
+            expires = expires.replace(tzinfo=UTC)
+        return expires < datetime.now(UTC)
     except (ValueError, TypeError):
         return False
 
@@ -97,7 +96,7 @@ def add_suppression(
         "object_id":     object_id,
         "reason":        reason,
         "ticket":        ticket,
-        "suppressed_at": datetime.now(timezone.utc).isoformat(),
+        "suppressed_at": datetime.now(UTC).isoformat(),
         "expires_at":    expires,
     })
     _save_raw(records)
@@ -136,7 +135,7 @@ def apply_suppressions(findings: list) -> list:
                     try:
                         expires_dt = datetime.fromisoformat(expires_raw)
                         if expires_dt.tzinfo is None:
-                            expires_dt = expires_dt.replace(tzinfo=timezone.utc)
+                            expires_dt = expires_dt.replace(tzinfo=UTC)
                     except (ValueError, TypeError):
                         pass
 
@@ -147,7 +146,7 @@ def apply_suppressions(findings: list) -> list:
                     reason=s["reason"],
                     ticket=s.get("ticket"),
                     suppressed_at=datetime.fromisoformat(s["suppressed_at"]).replace(
-                        tzinfo=timezone.utc
+                        tzinfo=UTC
                     ),
                     expires_at=expires_dt,
                 )

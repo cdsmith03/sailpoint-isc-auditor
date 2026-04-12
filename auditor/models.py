@@ -13,8 +13,8 @@ Design principles:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime, timezone
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -26,14 +26,14 @@ def _utcnow() -> datetime:
     Replaces datetime.utcnow() which is deprecated in Python 3.12+ and
     returns a naive datetime that cannot be compared with aware datetimes.
     """
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     CRITICAL = "critical"
     HIGH     = "high"
     MEDIUM   = "medium"
@@ -41,7 +41,7 @@ class Severity(str, Enum):
     INFO     = "info"
 
 
-class CollectionStatus(str, Enum):
+class CollectionStatus(StrEnum):
     FULL     = "full"
     PARTIAL  = "partial"
     FALLBACK = "fallback"
@@ -49,7 +49,7 @@ class CollectionStatus(str, Enum):
     FAILED   = "failed"
 
 
-class HealthBand(str, Enum):
+class HealthBand(StrEnum):
     HEALTHY   = "Healthy"
     STABLE    = "Stable"
     EXPOSED   = "Exposed"
@@ -57,7 +57,7 @@ class HealthBand(str, Enum):
     CRITICAL  = "Critical"
 
 
-class ControlFamily(str, Enum):
+class ControlFamily(StrEnum):
     MI = "Machine & Privileged Identity"
     IH = "Identity Hygiene"
     LI = "Lifecycle Integrity"
@@ -297,11 +297,16 @@ class TenantHealthScore(BaseModel):
 
     def compute_band(self) -> None:
         s = self.tenant_health
-        if s >= 90:   self.band = HealthBand.HEALTHY
-        elif s >= 75: self.band = HealthBand.STABLE
-        elif s >= 60: self.band = HealthBand.EXPOSED
-        elif s >= 40: self.band = HealthBand.HIGH_RISK
-        else:         self.band = HealthBand.CRITICAL
+        if s >= 90:
+            self.band = HealthBand.HEALTHY
+        elif s >= 75:
+            self.band = HealthBand.STABLE
+        elif s >= 60:
+            self.band = HealthBand.EXPOSED
+        elif s >= 40:
+            self.band = HealthBand.HIGH_RISK
+        else:
+            self.band = HealthBand.CRITICAL
 
     def compute_trend(self) -> None:
         if self.previous_score is not None:

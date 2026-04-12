@@ -20,18 +20,17 @@ from datetime import datetime
 from pathlib import Path
 
 import click
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
-from rich import box
-from rich.text import Text
 
 from . import __version__
 from .config import AuditorConfig, PolicyPack
+from .models import HealthBand, Severity
 
 logger = logging.getLogger(__name__)
-from .models import HealthBand, Severity
 
 console = Console()
 
@@ -188,7 +187,7 @@ def run(
     # Load config — Anthropic key is only required when AI analysis is enabled
     try:
         config = AuditorConfig.from_env(require_ai=not no_ai)
-    except EnvironmentError as e:
+    except OSError as e:
         console.print(f"[red]Configuration error:[/red] {e}")
         sys.exit(1)
 

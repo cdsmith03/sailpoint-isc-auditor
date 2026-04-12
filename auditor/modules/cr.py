@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 from ..client import ISCClient
 from ..config import PolicyPack
@@ -48,7 +48,7 @@ def _days_since(date_str: str | None) -> int | None:
         return None
     try:
         dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-        return (datetime.now(timezone.utc) - dt).days
+        return (datetime.now(UTC) - dt).days
     except (ValueError, TypeError):
         return None
 
@@ -210,7 +210,7 @@ def detect_cr_03(
     detector_id = "CR-03"
     eligible    = 0
 
-    STUCK_THRESHOLD_HOURS = 24
+    stuck_threshold_hours = 24
 
     for activity in account_activities:
         status = (activity.get("status") or "").upper()
@@ -226,11 +226,11 @@ def detect_cr_03(
         if created:
             try:
                 dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
-                hours_old = (datetime.now(timezone.utc) - dt).total_seconds() / 3600
+                hours_old = (datetime.now(UTC) - dt).total_seconds() / 3600
             except (ValueError, TypeError):
                 pass
 
-        if hours_old is not None and hours_old < STUCK_THRESHOLD_HOURS:
+        if hours_old is not None and hours_old < stuck_threshold_hours:
             continue   # Give recent activities time to complete
 
         identity_name = (activity.get("identity") or {}).get("name") or "unknown identity"

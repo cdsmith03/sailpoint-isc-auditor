@@ -169,7 +169,7 @@ class AuditorConfig(BaseModel):
                 "Copy .env.example to .env and fill in your ISC credentials."
                 " ANTHROPIC_API_KEY is not required when using --no-ai."
             )
-            raise EnvironmentError(
+            raise OSError(
                 f"Missing required environment variables: {', '.join(missing)}\n{hint}"
             )
 

@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from auditor.models import Finding, Severity, TenantHealthScore
+from auditor.models import Finding, TenantHealthScore
 
 
 class TestSuppressedFindingsPreservedThroughAI:
@@ -299,7 +299,7 @@ class TestNoAiCliWiring:
         When --no-ai is passed, AuditorConfig.from_env must be called
         with require_ai=False. This directly tests the wiring.
         """
-        from unittest.mock import MagicMock, patch, call
+        from unittest.mock import MagicMock, patch
         from click.testing import CliRunner
         from auditor.cli import main
         from auditor.config import AuditorConfig

@@ -181,9 +181,9 @@ def detect_ar_02(
                             "description": description,
                         },
                         recommended_fix=(
-                            f"Review and remediate. Consider formalizing this combination "
-                            f"as an SOD policy in ISC so future violations are automatically "
-                            f"detected and prevented."
+                            "Review and remediate. Consider formalizing this combination "
+                            "as an SOD policy in ISC so future violations are automatically "
+                            "detected and prevented."
                         ),
                         collection_status=CollectionStatus.FULL,
                         confidence=0.75,

@@ -17,12 +17,11 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 from ..client import ISCClient
 from ..config import PolicyPack
 from ..models import (
-    CollectionResult,
     CollectionStatus,
     ControlFamily,
     DetectorCoverage,
@@ -46,7 +45,7 @@ def _days_since(date_str: str | None) -> int | None:
         return None
     try:
         dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-        return (datetime.now(timezone.utc) - dt).days
+        return (datetime.now(UTC) - dt).days
     except (ValueError, TypeError):
         return None
 
@@ -173,9 +172,9 @@ def detect_ih_02(
                         "source": acct.get("sourceName", "unknown"),
                     },
                     recommended_fix=(
-                        f"Disable this account immediately. Confirm with the identity's "
-                        f"manager whether access is still needed. If not, deprovision "
-                        f"and document the action for audit trail."
+                        "Disable this account immediately. Confirm with the identity's "
+                        "manager whether access is still needed. If not, deprovision "
+                        "and document the action for audit trail."
                     ),
                     collection_status=CollectionStatus.FULL,
                     confidence=0.90,
@@ -409,10 +408,10 @@ def detect_ih_05(
                         "status": identity.get("status"),
                     },
                     recommended_fix=(
-                        f"Populate the missing attributes in the authoritative HR source "
-                        f"and trigger an identity refresh. If attributes are intentionally "
-                        f"absent (e.g. contractors), update your governance model to "
-                        f"account for this population."
+                        "Populate the missing attributes in the authoritative HR source "
+                        "and trigger an identity refresh. If attributes are intentionally "
+                        "absent (e.g. contractors), update your governance model to "
+                        "account for this population."
                     ),
                     collection_status=CollectionStatus.FULL,
                     confidence=0.90,

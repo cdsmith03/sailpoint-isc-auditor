@@ -25,15 +25,15 @@ from __future__ import annotations
 
 import html
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 
 from ..models import AuditResult, ControlFamily, HealthBand, Severity
 
 try:
-    from .. import __version__ as VERSION
+    from .. import __version__
 except ImportError:
-    VERSION = "0.1.0-dev"
+    __version__ = "0.1.0-dev"
 
 # Severity colour config
 SEV_COLOR = {
@@ -85,7 +85,7 @@ def _fmt_dt(dt: datetime | None) -> str:
     if dt.tzinfo is None:
         # Treat as UTC but flag it so the report is honest about the assumption.
         return dt.strftime("%Y-%m-%d %H:%M UTC (assumed)")
-    return dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return dt.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC")
 
 
 def _severity_badge(sev: Severity) -> str:
@@ -210,10 +210,10 @@ def generate_html_report(result: AuditResult, output_path: Path) -> None:
     # ── Family breakdown ───────────────────────────────────────────────────
     # Explicit family order — consistent across every report regardless of dict insertion order.
     # Ordered by strategic weight: highest-impact families first.
-    FAMILY_ORDER = ["MI", "LI", "AR", "IH", "GQ", "CR"]
+    family_order = ["MI", "LI", "AR", "IH", "GQ", "CR"]
     ordered_families = sorted(
         health.family_scores.items(),
-        key=lambda x: FAMILY_ORDER.index(x[0]) if x[0] in FAMILY_ORDER else 99,
+        key=lambda x: family_order.index(x[0]) if x[0] in family_order else 99,
     )
 
     family_cards_html = ""
@@ -311,7 +311,7 @@ def generate_html_report(result: AuditResult, output_path: Path) -> None:
         f'<tr><td>Tenant URL</td><td>{_e(result.tenant_url)}</td></tr>'
         f'<tr><td>Audit date</td><td>{_e(_fmt_dt(result.audited_at))}</td></tr>'
         f'<tr><td>Policy pack</td><td>{_e(result.policy_pack)}</td></tr>'
-        f'<tr><td>Tool version</td><td>sailpoint-isc-auditor v{_e(VERSION)}</td></tr>'
+        f'<tr><td>Tool version</td><td>sailpoint-isc-auditor v{_e(__version__)}</td></tr>'
         f'<tr><td>Detectors run</td><td>{len(result.detector_coverage)} of 25</td></tr>'
         f'<tr><td>Active findings</td><td>{len(active)}</td></tr>'
         f'<tr><td>Suppressed findings</td><td>{len(suppressed)}</td></tr>'
@@ -535,7 +535,7 @@ def generate_html_report(result: AuditResult, output_path: Path) -> None:
   <div class="header-meta">
     Generated: {_e(_fmt_dt(result.audited_at))}<br>
     Policy pack: {_e(result.policy_pack)}<br>
-    Tool version: v{_e(VERSION)}
+    Tool version: v{_e(__version__)}
   </div>
 </header>
 

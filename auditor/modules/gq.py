@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 from ..client import ISCClient
 from ..config import PolicyPack
@@ -47,7 +47,7 @@ def _days_since(date_str: str | None) -> int | None:
         return None
     try:
         dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-        return (datetime.now(timezone.utc) - dt).days
+        return (datetime.now(UTC) - dt).days
     except (ValueError, TypeError):
         return None
 
@@ -227,8 +227,8 @@ def detect_gq_03(
     detector_id = "GQ-03"
     eligible = 0
 
-    FAST_APPROVAL_SECONDS = 30    # less than 30s per decision = suspicious
-    HIGH_APPROVE_RATE     = 0.98  # 98%+ approve rate on large campaigns
+    fast_approval_seconds = 30    # less than 30s per decision = suspicious
+    high_approve_rate     = 0.98  # 98%+ approve rate on large campaigns
 
     for cert in certifications:
         status = (cert.get("status") or "").upper()
@@ -250,7 +250,7 @@ def detect_gq_03(
         approve_rate = approved_items / total_items if total_items else 0
         issues = []
 
-        if approve_rate >= HIGH_APPROVE_RATE and total_items >= 20:
+        if approve_rate >= high_approve_rate and total_items >= 20:
             issues.append(
                 f"{approve_rate*100:.1f}% approval rate across {total_items} items "
                 f"({revoked_items} revocations)"
@@ -258,10 +258,10 @@ def detect_gq_03(
 
         if duration_secs and total_items:
             avg_secs = duration_secs / total_items
-            if avg_secs < FAST_APPROVAL_SECONDS:
+            if avg_secs < fast_approval_seconds:
                 issues.append(
                     f"Average {avg_secs:.0f}s per decision "
-                    f"(threshold: {FAST_APPROVAL_SECONDS}s)"
+                    f"(threshold: {fast_approval_seconds}s)"
                 )
 
         if issues:
@@ -467,7 +467,6 @@ def detect_gq_06(
             eligible += 1
             reviewer_id  = (item.get("reviewer") or {}).get("id")
             subject_id   = (item.get("subject") or item.get("identity") or {}).get("id")
-            requester_id = (item.get("requestedBy") or {}).get("id")
 
             if not reviewer_id:
                 continue
