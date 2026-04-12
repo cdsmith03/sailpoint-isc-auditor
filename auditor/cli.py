@@ -110,9 +110,9 @@ def _print_summary_table(result) -> None:
         table.add_row(
             fs.family.value,
             f"[{score_color}]{fs.score:.0f}[/{score_color}]",
-            f"[red]{fs.critical_count}[/red]" if fs.critical_count else "[dim]0[/dim]",
-            str(fs.finding_count - fs.critical_count) if fs.finding_count > fs.critical_count else "[dim]0[/dim]",
-            "[dim]—[/dim]",
+            f"[red]{fs.critical_count}[/red]"    if fs.critical_count else "[dim]0[/dim]",
+            f"[yellow]{fs.high_count}[/yellow]"  if fs.high_count     else "[dim]0[/dim]",
+            f"[yellow]{fs.medium_count}[/yellow]" if fs.medium_count  else "[dim]0[/dim]",
         )
 
     console.print("  Control family breakdown")
