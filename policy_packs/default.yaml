@@ -1,19 +1,24 @@
 # sailpoint-isc-auditor default policy pack
-# Copy this file and customize for your tenant.
-# Usage: isc-audit run --all --policy-pack ./policy_packs/myorg.yaml
+#
+# Copy this file and customise for your tenant:
+#   isc-audit run --all --policy-pack ./policy_packs/myorg.yaml
+#
+# FORMAT: Both flat and nested thresholds: formats are supported.
+# This file uses the nested format — group thresholds together for readability.
+# Either format loads correctly; top-level keys take precedence if both exist.
 
-# Inactivity thresholds
+# ── Inactivity & lifecycle thresholds ─────────────────────────────────────────
 thresholds:
-  stale_account_days: 90          # IH-02: accounts inactive longer than this are flagged
+  stale_account_days: 90          # IH-02: accounts inactive longer than this
   inactivity_days: 60             # MI-03: machine identities dormant longer than this
   non_employee_grace_days: 7      # LI-05: days past end date before flagging
-  mover_grace_days: 30            # LI-03: days after role change before stale access is flagged
-  peer_group_outlier_pct: 95      # AR-03: percentile threshold for outlier detection
+  mover_grace_days: 30            # LI-03: days after role change before stale access flagged
+  peer_group_outlier_pct: 95.0    # AR-03: percentile threshold for outlier detection
   certification_overdue_days: 7   # GQ-01: days past due date before campaign is flagged
   source_stale_days: 3            # CR-02: days since last aggregation before flagging
 
-# Apps treated as privileged/critical
-# Findings involving these apps score higher impact
+# ── Privileged apps ───────────────────────────────────────────────────────────
+# Findings involving these apps score higher impact.
 privileged_apps:
   - "AWS"
   - "Azure"
@@ -26,8 +31,8 @@ privileged_apps:
   - "Active Directory"
   - "ServiceNow"
 
-# Entitlement names treated as sensitive
-# AR-06 fires when these are held by a broad population
+# ── Sensitive entitlements ────────────────────────────────────────────────────
+# AR-06 fires when these are held by a broad population.
 sensitive_entitlements:
   - "Payroll Admin"
   - "GL Posting"
@@ -40,22 +45,23 @@ sensitive_entitlements:
   - "Global Admin"
   - "Security Admin"
 
-# Sources treated as authoritative / critical
-# CR-07 fires when these have low policy attachment
+# ── Critical sources ──────────────────────────────────────────────────────────
+# CR-07 fires when these have low policy attachment.
 critical_sources:
   - "Workday"
   - "Active Directory"
   - "AWS"
   - "Azure AD"
 
-# Naming convention regex patterns
-# MI-06 fires when service accounts don't match these patterns
+# ── Naming conventions ────────────────────────────────────────────────────────
+# MI-06 fires when service accounts don't match these patterns.
 naming_conventions:
   service_accounts: "^svc[-_]"
   break_glass: "^(bg|emergency|breakglass)[-_]"
   shared_accounts: "^(shared|generic|admin)[-_]"
 
-# Per-detector overrides
+# ── Per-detector overrides ────────────────────────────────────────────────────
+# Uncomment and customise to disable detectors or override thresholds.
 # detector_overrides:
 #   MI-06:
 #     enabled: false           # disable this detector entirely

@@ -83,9 +83,55 @@ class PolicyPack(BaseModel):
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> PolicyPack:
+        """Load a policy pack from a YAML file.
+
+        Supports two formats — both load identically:
+
+        Flat format:
+            stale_account_days: 90
+            inactivity_days: 60
+
+        Nested format (groups thresholds for readability):
+            thresholds:
+              stale_account_days: 90
+              inactivity_days: 60
+
+        If a thresholds: block is present, its contents are merged into
+        the top level. Keys defined at the top level always take precedence
+        over keys inside thresholds: when both are present.
+
+        The default policy pack uses the nested format. Both are equally
+        supported — use whichever is clearer for your team.
+        """
         with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
-        return cls(**data)
+
+        if not isinstance(data, dict):
+            raise ValueError(
+                f"Policy pack root must be a mapping/object, "
+                f"got {type(data).__name__!r}. "
+                f"Check that your policy pack YAML file is not a list or scalar."
+            )
+
+        # Support nested thresholds: block — merge into top level.
+        # This was the format used by default.yaml and documented in the
+        # README, but PolicyPack expects flat top-level fields.
+        thresholds = data.pop("thresholds", None)
+
+        if thresholds is not None and not isinstance(thresholds, dict):
+            raise ValueError(
+                f"Policy pack 'thresholds' must be a mapping/object, "
+                f"got {type(thresholds).__name__!r}. "
+                f"Check the format of your policy pack YAML."
+            )
+
+        if isinstance(thresholds, dict):
+            # Top-level keys win over thresholds: keys if both are present.
+            merged = {**thresholds, **data}
+        else:
+            merged = data
+
+        return cls(**merged)
 
     @classmethod
     def default(cls) -> PolicyPack:
