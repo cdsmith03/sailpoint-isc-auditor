@@ -13,8 +13,8 @@ Regression tests for Issue #22:
 from __future__ import annotations
 
 import pytest
-from auditor.config import AuditorConfig, PolicyPack
 
+from auditor.config import AuditorConfig, PolicyPack
 
 # ---------------------------------------------------------------------------
 # PolicyPack.from_yaml — format compatibility (Issue #22)
