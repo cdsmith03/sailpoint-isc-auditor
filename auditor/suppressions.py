@@ -155,11 +155,19 @@ def apply_suppressions(findings: list) -> list:
     return findings
 
 
-def load_history() -> list[dict]:
-    """Load audit run history for trend tracking."""
-    if not HISTORY_FILE.exists():
+def load_history(path: Path | None = None) -> list[dict]:
+    """Load audit run history for trend tracking.
+
+    Args:
+        path: Path to the history file. Defaults to HISTORY_FILE (~/.isc-audit/history.json).
+              Pass config.history_file explicitly to ensure the same file is used
+              for both reading (trend) and writing (save), especially when the
+              history location has been customised in config.
+    """
+    history_path = path if path is not None else HISTORY_FILE
+    if not history_path.exists():
         return []
-    with open(HISTORY_FILE, encoding="utf-8") as f:
+    with open(history_path, encoding="utf-8") as f:
         try:
             return json.load(f)
         except json.JSONDecodeError:

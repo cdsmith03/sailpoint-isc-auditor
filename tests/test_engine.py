@@ -342,3 +342,150 @@ class TestNoAiCliWiring:
 
         # Verify from_env was called with require_ai=False
         mock_from_env.assert_called_once_with(require_ai=False)
+
+
+class TestTrendCalculation:
+    """
+    Tests for Issue #24 — trend calculation not wired.
+
+    History saved correctly but previous_score was never loaded before
+    scoring, so trend was always None on every run.
+
+    The contract being tested:
+      - When history exists for a tenant, trend is computed
+      - When no history exists, trend remains None (first run)
+      - Trend direction is correct (positive = improving)
+      - History for a different tenant does not affect trend
+    """
+
+    def test_trend_computed_from_history(self, tmp_path):
+        """
+        When history exists for this tenant, previous_score and trend
+        must be populated after _wire_trend() runs.
+        """
+        from auditor.engine import _wire_trend
+        from auditor.models import AuditResult, HealthBand
+
+        history_file = tmp_path / "history.json"
+        history_file.write_text(
+            '[{"tenant_url": "https://acme.identitynow.com", "tenant_health": 60.0}]',
+            encoding="utf-8",
+        )
+
+        result = AuditResult(
+            tenant_url="https://acme.identitynow.com",
+            policy_pack="default",
+        )
+        result.health_score.tenant_health = 75.0
+        result.health_score.band = HealthBand.STABLE
+
+        _wire_trend(result, "https://acme.identitynow.com", history_file)
+
+        assert result.health_score.previous_score == 60.0, (
+            "previous_score should be loaded from history"
+        )
+        assert result.health_score.trend == 15.0, (
+            "trend should be current - previous = 75 - 60 = 15"
+        )
+
+    def test_no_history_trend_remains_none(self, tmp_path):
+        """
+        When no history exists for this tenant, trend should remain None.
+        This is the "First run" case.
+        """
+        from auditor.engine import _wire_trend
+        from auditor.models import AuditResult
+
+        empty_file = tmp_path / "history.json"
+        empty_file.write_text("[]", encoding="utf-8")
+
+        result = AuditResult(
+            tenant_url="https://acme.identitynow.com",
+            policy_pack="default",
+        )
+        result.health_score.tenant_health = 75.0
+
+        _wire_trend(result, "https://acme.identitynow.com", empty_file)
+
+        assert result.health_score.previous_score is None
+        assert result.health_score.trend is None
+
+    def test_different_tenant_history_not_used(self, tmp_path):
+        """
+        History for a different tenant must not affect this tenant's trend.
+        """
+        from auditor.engine import _wire_trend
+        from auditor.models import AuditResult
+
+        history_file = tmp_path / "history.json"
+        history_file.write_text(
+            '[{"tenant_url": "https://other.identitynow.com", "tenant_health": 40.0}]',
+            encoding="utf-8",
+        )
+
+        result = AuditResult(
+            tenant_url="https://acme.identitynow.com",
+            policy_pack="default",
+        )
+        result.health_score.tenant_health = 75.0
+
+        _wire_trend(result, "https://acme.identitynow.com", history_file)
+
+        assert result.health_score.previous_score is None
+        assert result.health_score.trend is None
+
+    def test_trend_negative_when_degrading(self, tmp_path):
+        """A lower current score than previous should produce a negative trend."""
+        from auditor.engine import _wire_trend
+        from auditor.models import AuditResult
+
+        history_file = tmp_path / "history.json"
+        history_file.write_text(
+            '[{"tenant_url": "https://acme.identitynow.com", "tenant_health": 85.0}]',
+            encoding="utf-8",
+        )
+
+        result = AuditResult(
+            tenant_url="https://acme.identitynow.com",
+            policy_pack="default",
+        )
+        result.health_score.tenant_health = 70.0
+
+        _wire_trend(result, "https://acme.identitynow.com", history_file)
+
+        assert result.health_score.trend == -15.0
+
+    def test_trend_uses_config_history_file_not_default(self, tmp_path):
+        """
+        Regression test: _wire_trend must read from the same path that
+        _save_history writes to (config.history_file), not the global default.
+
+        Before the fix, _wire_trend called load_history() with no path,
+        so it always read from ~/.isc-audit/history.json regardless of
+        what path the CLI used to save history. This broke multi-tenant
+        setups and test isolation.
+        """
+        from auditor.engine import _wire_trend
+        from auditor.models import AuditResult
+
+        # Write history to a custom path (simulates config.history_file)
+        custom_history = tmp_path / "custom_history.json"
+        custom_history.write_text(
+            '[{"tenant_url": "https://acme.identitynow.com", "tenant_health": 55.0}]',
+            encoding="utf-8",
+        )
+
+        result = AuditResult(
+            tenant_url="https://acme.identitynow.com",
+            policy_pack="default",
+        )
+        result.health_score.tenant_health = 80.0
+
+        # Pass the custom path explicitly — this is what run_audit() does
+        _wire_trend(result, "https://acme.identitynow.com", custom_history)
+
+        assert result.health_score.previous_score == 55.0, (
+            "_wire_trend must read from the path passed in, "
+            "not the global HISTORY_FILE default."
+        )
+        assert result.health_score.trend == 25.0

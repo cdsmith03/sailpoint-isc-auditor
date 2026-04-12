@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from pathlib import Path
 
 from .client import ISCClient
 from .config import AuditorConfig, PolicyPack
@@ -144,6 +145,13 @@ def run_audit(
         # Score everything
         progress("Computing tenant health score...")
         result.health_score = compute_tenant_health(result, eligible_by_detector)
+
+        # Wire trend — load the most recent score for this tenant from history
+        # and compute the delta. This must happen AFTER scoring so we have
+        # the current score to compare against.
+        # Pass config.history_file explicitly so save and load are symmetric —
+        # both the CLI writer and trend reader use the same file.
+        _wire_trend(result, config.tenant_url, config.history_file)
 
         # AI analysis
         # analyze_findings() mutates finding objects in-place — do NOT reassign
@@ -427,3 +435,71 @@ def _compute_certification_coverage_signal(
         if cs.lower() in certified_sources
     )
     return _safe_ratio(covered, len(policy.critical_sources))
+
+def _wire_trend(result: AuditResult, tenant_url: str, history_file: Path) -> None:
+    """
+    Load the most recent health score for this tenant from history and
+    compute the trend delta.
+
+    This mutates result.health_score in-place:
+      - previous_score: the tenant_health from the last run
+      - trend: current - previous (positive = improving, negative = degrading)
+
+    If no history exists for this tenant, both fields remain None and the
+    report shows "First run — no trend data."
+
+    Args:
+        result:       The AuditResult being finalized.
+        tenant_url:   Used to key history — multi-tenant safe.
+        history_file: Must match the path used by _save_history() so that
+                      save and load are symmetric. Pass config.history_file.
+
+    History is keyed by tenant_url so multi-tenant users get correct per-tenant
+    trends rather than comparing scores across different environments.
+    """
+    try:
+        from .suppressions import load_history
+        records = load_history(history_file)
+    except Exception as exc:
+        logger.debug("Trend: could not load history: %s", exc)
+        return
+
+    # Find all records for this tenant.
+    # Sort by date field when present so the most recent entry is always
+    # correct even if records were written out of order or the file was
+    # manually edited. Falls back to append order (the common case) when
+    # no date field is present.
+    tenant_records = [
+        r for r in records
+        if r.get("tenant_url") == tenant_url
+    ]
+
+    if not tenant_records:
+        logger.debug("Trend: no history found for tenant %s", tenant_url)
+        return
+
+    # "%Y-%m-%d %H:%M" strings sort correctly lexicographically — ISO-8601
+    # order matches chronological order, so string comparison is safe here.
+    # "%Y-%m-%d %H:%M" strings sort correctly lexicographically as ISO-8601,
+    # so string comparison gives the right chronological order.
+    tenant_records.sort(key=lambda r: r.get("date", ""))
+
+    # Use the most recent previous run
+    last = tenant_records[-1]
+    previous_score = last.get("tenant_health")
+
+    if previous_score is None:
+        logger.debug("Trend: last history record missing tenant_health")
+        return
+
+    try:
+        result.health_score.previous_score = float(previous_score)
+        result.health_score.compute_trend()
+        logger.info(
+            "Trend: %.1f → %.1f (delta: %+.1f)",
+            previous_score,
+            result.health_score.tenant_health,
+            result.health_score.trend or 0,
+        )
+    except (ValueError, TypeError) as exc:
+        logger.debug("Trend: could not compute trend: %s", exc)
