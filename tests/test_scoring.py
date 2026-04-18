@@ -16,6 +16,8 @@ Closes #28
 
 from __future__ import annotations
 
+import pytest
+
 from auditor.models import (
     AuditResult,
     CollectionStatus,
@@ -91,17 +93,17 @@ class TestRiskScore:
         rs = RiskScore(impact=0.0, exploitability=1.0, governance_failure=1.0)
         assert rs.normalized == 0.0
 
-    def test_inputs_clamped_above_one(self):
-        """Inputs above 1.0 must be clamped to 1.0."""
-        rs = RiskScore(impact=2.0, exploitability=1.5, governance_failure=1.0)
-        assert rs.impact <= 1.0
-        assert rs.exploitability <= 1.0
+    def test_inputs_above_one_rejected(self):
+        """Inputs above 1.0 must be rejected with a ValidationError."""
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            RiskScore(impact=2.0, exploitability=1.5, governance_failure=1.0)
 
-    def test_inputs_clamped_below_zero(self):
-        """Inputs below 0.0 must be clamped to 0.0."""
-        rs = RiskScore(impact=-0.5, exploitability=-1.0, governance_failure=0.5)
-        assert rs.impact >= 0.0
-        assert rs.exploitability >= 0.0
+    def test_inputs_below_zero_rejected(self):
+        """Inputs below 0.0 must be rejected with a ValidationError."""
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            RiskScore(impact=-0.5, exploitability=-1.0, governance_failure=0.5)
 
 
 # ---------------------------------------------------------------------------
