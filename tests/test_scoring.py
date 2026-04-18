@@ -16,8 +16,6 @@ Closes #28
 
 from __future__ import annotations
 
-import pytest
-
 from auditor.models import (
     AuditResult,
     CollectionStatus,
@@ -184,7 +182,8 @@ class TestFamilyScoreSeverityCounts:
             "MI-02": [findings[1]],
             "MI-03": [findings[2]],
         }
-        fs = compute_family_score(ControlFamily.MI, findings_by_detector, {"MI-01": 10, "MI-02": 10, "MI-03": 10})
+        eligible = {"MI-01": 10, "MI-02": 10, "MI-03": 10}
+        fs = compute_family_score(ControlFamily.MI, findings_by_detector, eligible)
         assert fs.high_count == 2
 
     def test_medium_count_populated_correctly(self):
@@ -197,7 +196,8 @@ class TestFamilyScoreSeverityCounts:
             "MI-01": [findings[0]],
             "MI-02": [findings[1]],
         }
-        fs = compute_family_score(ControlFamily.MI, findings_by_detector, {"MI-01": 10, "MI-02": 10})
+        eligible = {"MI-01": 10, "MI-02": 10}
+        fs = compute_family_score(ControlFamily.MI, findings_by_detector, eligible)
         assert fs.medium_count == 2
 
     def test_suppressed_findings_not_counted(self):
@@ -294,7 +294,7 @@ class TestHealthBandAssignment:
     """Tests that health bands are assigned at the correct boundary values."""
 
     def _health_at(self, score: float) -> HealthBand:
-        from auditor.models import TenantHealthScore, CoverageConfidence
+        from auditor.models import CoverageConfidence, TenantHealthScore
         h = TenantHealthScore(
             tenant_health=score,
             posture_score=score,
